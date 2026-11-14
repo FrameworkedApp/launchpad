@@ -164,7 +164,7 @@ known-first-party = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# These three are SCHEMA_SOURCE_FILES (plugin-v2-handshake-lint.py:694-710).
+# These two are in SCHEMA_SOURCE_FILES (plugin-v2-handshake-lint.py).
 # Editing them, even to add a `# noqa` marker, puts them in
 # `git diff --name-only` and hard-fails check_schema_codeowners_gate unless
 # SCAFFOLD_HANDSHAKE.md is co-touched. Suppressing here keeps them out of the
@@ -177,11 +177,10 @@ known-first-party = [
 # silently stops matching from any cwd that is not an ancestor of the tree:
 # the same anchoring defect this file's `known-first-party` block exists to
 # fix. Bare basenames use ruff's basename matcher and are cwd-independent.
-# All three are verified unique in the linted surface by the guard test.
+# Both are verified unique in the linted surface by the guard test.
 #
-# TEMPORARY. Re-sorting these belongs in a PR that legitimately pairs with
-# SCAFFOLD_HANDSHAKE.md; remove these three entries there.
-"decision_writer.py" = ["I001"]
+# TEMPORARY. Re-sort each file in a PR that legitimately pairs with
+# SCAFFOLD_HANDSHAKE.md, and remove its entry there.
 "manifest_writer.py" = ["I001"]
 "_renderer_base.py" = ["I001"]
 

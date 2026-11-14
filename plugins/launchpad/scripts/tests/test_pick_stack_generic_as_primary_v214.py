@@ -100,7 +100,7 @@ def test_generic_primary_via_manual_override_writes_decision(
     ]
     # generic is a STACK_ID_ACTIVE_ENUM member; the v1.1 envelope's
     # flat `stacks` array is derived from layers and passes through
-    # unchanged (no _CATALOG_FALLBACK_MAP translation).
+    # unchanged (no CATALOG_ALIASES translation).
     assert "generic" in decision["stacks"]
 
 

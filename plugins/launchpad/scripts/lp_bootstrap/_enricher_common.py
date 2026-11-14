@@ -87,10 +87,10 @@ def read_enricher_stacks(cwd: Path, *, module_spec_name: str) -> list[str]:
             ids = payload.get("stacks")
             if not isinstance(ids, list) or not all(isinstance(s, str) for s in ids):
                 return []
-        from lp_pick_stack.decision_writer import derive_stacks
+        from lp_pick_stack.stack_aliases import canonical_stack_ids
         from plugin_default_generators._renderer_base import STACK_ID_ACTIVE_ENUM
 
-        normalized = derive_stacks([{"stack": stack_id} for stack_id in ids])
+        normalized = canonical_stack_ids(ids)
         return [stack_id for stack_id in normalized if stack_id in STACK_ID_ACTIVE_ENUM]
     except Exception:
         return []

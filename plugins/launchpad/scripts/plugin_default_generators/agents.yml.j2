@@ -7,6 +7,8 @@
 # overwrite it — edit freely. Re-running /lp-define will NOT silently
 # clobber your edits (the overwrite menu treats this as a protected file).
 
+{# Reviewer conditionals test `canonical_stacks` (stack ids after the
+   catalog alias mapping), never the persisted `stacks`. -#}
 # Code review agents — dispatched by /lp-review
 review_agents:
   - lp-pattern-finder
@@ -17,10 +19,10 @@ review_agents:
   - lp-performance-auditor
   - lp-architecture-strategist
   - lp-foad-go-reviewer
-{%- if 'ts_monorepo' in stacks %}
+{%- if 'ts_monorepo' in canonical_stacks %}
   - lp-kieran-foad-ts-reviewer
 {%- endif %}
-{%- if 'python_django' in stacks or 'python_generic' in stacks %}
+{%- if 'python_django' in canonical_stacks or 'python_generic' in canonical_stacks %}
   - lp-kieran-foad-python-reviewer
 {%- endif %}
 
@@ -61,7 +63,7 @@ harden_plan_conditional_agents:
   - lp-architecture-strategist
   - lp-code-simplicity-reviewer
   - lp-schema-drift-detector
-{%- if 'ts_monorepo' in stacks %}
+{%- if 'ts_monorepo' in canonical_stacks %}
   - lp-frontend-races-reviewer
 {%- endif %}
 

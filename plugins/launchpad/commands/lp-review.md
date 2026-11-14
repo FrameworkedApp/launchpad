@@ -147,9 +147,12 @@ resolved_review_agents, stacks, prevalidated_project_scopes=
 prevalidated_project_agent_scopes, raise_on_no_match=True)` where
 `stacks = plugin_config_loader.read_stacks(cwd)`.
 The filter drops agents whose `stack_scope` does not match any of the
-project's persisted stacks. Step 4 (DB-only conditional), Step 4.5
-(design and copy conditionals), and Step 4.6 (document conditional) are NOT
-filtered. `/lp-review` has no Step 3.5.
+project's persisted stacks. Persisted scaffolders.yml keys such as `hono`
+or `next` are first mapped to canonical stack ids through the shared alias
+table in `lp_pick_stack/stack_aliases.py`; an id that maps to no known
+stack still raises and takes the pass-through fallback. Step 4 (DB-only
+conditional), Step 4.5 (design and copy conditionals), and Step 4.6
+(document conditional) are NOT filtered. `/lp-review` has no Step 3.5.
 
 **All-stack-mismatch refusal:** catch
 `plugin_agent_scope_filter.NoMatchingAgentsError` before the broad fallback,
