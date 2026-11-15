@@ -687,8 +687,8 @@ Seven hooks run on every commit, ordered by priority, auto-fixers first, then va
 ### Three-layer merge prevention
 
 1. **Command prohibition**: `/lp-ship` and `/lp-commit` explicitly refuse to run `gh pr merge` or `git merge main`.
-2. **PreToolUse hook**: intercepts merge commands at the tool level before execution, except `gh pr merge <number>` on a Dependabot pull request.
-3. **GitHub branch protection**: server-side rules requiring approvals before merge.
+2. **PreToolUse hook**: intercepts merge commands at the tool level before execution, except a standalone `gh pr merge <number>` with no option but `--squash`, `--auto` or `--delete-branch`.
+3. **GitHub branch protection**: server-side rules requiring a pull request with passing required checks; require approvals too once more than one person has write access.
 
 ---
 

@@ -153,7 +153,7 @@ Multi-agent review findings are scored 0.00 to 1.00 with a 0.60 threshold. Findi
 Three layers prevent unsafe merges, and the project assumes all three are active:
 
 1. Commands refuse to run `gh pr merge` and `git merge main`
-2. A `PreToolUse` hook intercepts those commands at the tool level (file: `.claude/hooks/block-merges.sh`). Its one exception is a standalone `gh pr merge <number>`, with no options other than `--squash`, `--auto` or `--delete-branch`, run from the project directory on a pull request opened by Dependabot, so dependency updates can merge once the required checks pass
+2. A `PreToolUse` hook intercepts those commands at the tool level (file: `.claude/hooks/block-merges.sh`). Its one exception is a standalone `gh pr merge <number>`, with no options other than `--squash`, `--auto` or `--delete-branch`, run from the project directory, so a maintainer can have Claude merge a reviewed pull request; `--admin` and every other option stay blocked, and branch protection still decides whether the pull request can merge
 3. GitHub branch protection backs the rule server-side
 
 PRs that weaken any of these layers, including bypassing the hook, will be rejected. The `--no-verify` flag is never acceptable; if a hook is broken, fix the hook.

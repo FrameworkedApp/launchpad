@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # PreToolUse hook: blocks merge, force-push, and approve commands.
-# One exception: Dependabot PRs may be merged by number (see EXEMPT_MERGE_RE).
+# One exception: a standalone merge of one PR by number (see EXEMPT_MERGE_RE).
 # Claude Code passes tool input as JSON on stdin.
 # Exit 0 = allow, Exit 2 = block.
 
@@ -38,20 +38,30 @@ CMD_TRIM="${CMD_TRIM%"${CMD_TRIM##*[![:space:]]}"}"
 # then flatten to single line for boundary matching.
 FLAT=$(printf '%s' "$CMD_TRIM" | tr '\n' ';')
 
-# Dependabot merge exception. The exempt merge must be the whole command, so
-# nothing else in it can change the directory, environment or repository the
-# merge runs against, and it must run from inside the project directory.
+# Plain merge exception. A maintainer may have Claude merge one PR by number;
+# branch protection on the server still decides whether it can merge. The
+# exempt merge must be the whole command, so nothing else in it can change the
+# directory, environment or repository the merge runs against. It must run in
+# the project's own git repository (not a nested clone or submodule), from a
+# cwd the hook input names, with no GH_REPO or GH_HOST in the hook's
+# environment. Any other option, such as --admin (which can bypass branch
+# protection), keeps it blocked. Out of reach: GH_REPO or GH_HOST exported
+# only inside the Bash tool's own shell, and gh aliases defined outside a
+# command this hook sees (aliases defined through gh are blocked below).
 TRIMMED=$FLAT
-EXEMPT_MERGE_RE='^gh pr merge[[:space:]]+([0-9]+)([[:space:]]+(--squash|--auto|--delete-branch))*$'
+EXEMPT_MERGE_RE='^gh pr merge[[:blank:]]+([0-9]+)([[:blank:]]+(--squash|--auto|--delete-branch))*$'
 EXEMPT_PR_NUMBER=$(printf '%s' "$TRIMMED" | sed -nE "s/$EXEMPT_MERGE_RE/\1/p")
 HOOK_CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null) || HOOK_CWD=""
-HOOK_CWD=${HOOK_CWD:-${CLAUDE_PROJECT_DIR:-}}
 IN_PROJECT=no
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -n "$HOOK_CWD" ]; then
-  PROJECT_REAL=$(CDPATH='' cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && pwd -P) || PROJECT_REAL=""
-  CWD_REAL=$(CDPATH='' cd "$HOOK_CWD" 2>/dev/null && pwd -P) || CWD_REAL=""
-  if [ -n "$PROJECT_REAL" ] && [ -n "$CWD_REAL" ]; then
-    case "$CWD_REAL/" in "$PROJECT_REAL"/*) IN_PROJECT=yes ;; esac
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -n "$HOOK_CWD" ] && \
+   [ -z "${GH_REPO:-}" ] && [ -z "${GH_HOST:-}" ]; then
+  PROJECT_TOP=$(git -C "$CLAUDE_PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null) || PROJECT_TOP=""
+  CWD_TOP=$(git -C "$HOOK_CWD" rev-parse --show-toplevel 2>/dev/null) || CWD_TOP=""
+  PROJECT_REAL=$(CDPATH='' cd "$PROJECT_TOP" 2>/dev/null && pwd -P) || PROJECT_REAL=""
+  CWD_REAL=$(CDPATH='' cd "$CWD_TOP" 2>/dev/null && pwd -P) || CWD_REAL=""
+  if [ -n "$PROJECT_TOP" ] && [ -n "$CWD_TOP" ] && [ -n "$PROJECT_REAL" ] && \
+     [ "$CWD_REAL" = "$PROJECT_REAL" ]; then
+    IN_PROJECT=yes
   fi
 fi
 
@@ -499,15 +509,18 @@ if [ "$A_BODY" = 1 ] || [ "$B_BODY" = 1 ]; then
   exit 2
 fi
 
-# gh pr merge, found by either scan, except the exempt Dependabot merge above.
-# Fails closed if the author cannot be confirmed.
+# A gh alias or extension can wrap any gh command (gh pr merge --admin
+# included) under a name no check here recognizes, so defining one is blocked.
+GH_WRAP_RE='(^|[^A-Za-z0-9_-])gh([[:space:]]+-[^[:space:]]+)*[[:space:]]+(alias|extension|extensions|ext)[[:space:]]+(set|import|install|upgrade|create|exec)'
+if [ "$(grep_status -E "$GH_WRAP_RE" "$UNQUOTED")" != 1 ]; then
+  echo "BLOCKED: defining or running gh aliases and extensions is prohibited; they can wrap a blocked gh command." >&2
+  exit 2
+fi
+
+# gh pr merge, found by either scan, except the exempt plain merge above.
 if [ "$A_MERGE" = 1 ] || [ "$B_MERGE" = 1 ]; then
-  PR_AUTHOR=""
-  if [ -n "$EXEMPT_PR_NUMBER" ] && [ "$IN_PROJECT" = "yes" ]; then
-    PR_AUTHOR=$(CDPATH='' cd "$HOOK_CWD" && gh pr view "$EXEMPT_PR_NUMBER" --json author --jq '.author.login' 2>/dev/null) || PR_AUTHOR=""
-  fi
-  if [ "$PR_AUTHOR" != "app/dependabot" ]; then
-    echo "BLOCKED: gh pr merge is prohibited. The pipeline stops at PR creation (only a standalone 'gh pr merge <number> [--squash] [--auto] [--delete-branch]' on a Dependabot PR, run from the project directory, is allowed)." >&2
+  if [ -z "$EXEMPT_PR_NUMBER" ] || [ "$IN_PROJECT" != "yes" ]; then
+    echo "BLOCKED: gh pr merge is prohibited except as a standalone 'gh pr merge <number> [--squash] [--auto] [--delete-branch]' run from the project directory." >&2
     exit 2
   fi
 fi
@@ -522,7 +535,7 @@ SEG_FLAGS=$(printf '%s\n' "$FLAT" | tr ';&|' '\n\n\n' | awk '
   s ~ /^git merge[[:space:]]+(main|master)/ && s !~ /^git merge[[:space:]]+origin\// { gm = 1 }
   s ~ /^git push[[:space:]].*--force/ || s ~ /^git push[[:space:]]+-f/ { fp = 1 }
   s ~ /^git push[[:space:]]+.*origin[[:space:]]+(main|master|head:(main|master))/ { pm = 1 }
-  s ~ /^gh pr review[[:space:]]+--approve/ { ap = 1 }
+  s ~ /^gh[[:space:]].*pr[[:space:]]+review([[:space:]]|$)/ && s ~ /[[:space:]](--approve([=[:space:]]|$)|-[a-z]*a[a-z]*([[:space:]]|$))/ { ap = 1 }
   END { printf "%d %d %d %d\n", gm, fp, pm, ap }' 2>/dev/null) || SEG_FLAGS=""
 case "$SEG_FLAGS" in
   [01]\ [01]\ [01]\ [01]) ;;
@@ -548,7 +561,17 @@ if [ "$SEG_PUSH_MAIN" = 1 ]; then
   exit 2
 fi
 
-# gh pr review --approve
+# PR approvals: gh pr review with --approve or -a in any segment, and the same
+# on the quote-free, line-joined text so quoting, wrappers (env, command,
+# bash -c) and line continuations cannot hide one; also approvals through the
+# REST reviews endpoint or the GraphQL review mutations.
+APPROVE_CLI_RE='pr[[:space:]]+review([[:space:]].*)?[[:space:]](--approve([=[:space:]]|$)|-[a-z]*a[a-z]*([[:space:]]|$))'
+APPROVE_API_RE='(pulls/[^[:space:]]*/reviews|addPullRequestReview|submitPullRequestReview)'
+if [ "$(grep_status -E "$APPROVE_CLI_RE" "$UNQUOTED")" != 1 ] || \
+   { [ "$(grep_status -iE "$APPROVE_API_RE" "$UNQUOTED")" != 1 ] && \
+     [ "$(grep_status -iE "approve" "$UNQUOTED")" != 1 ]; }; then
+  SEG_APPROVE=1
+fi
 if [ "$SEG_APPROVE" = 1 ]; then
   echo "BLOCKED: PR auto-approve is prohibited." >&2
   exit 2
