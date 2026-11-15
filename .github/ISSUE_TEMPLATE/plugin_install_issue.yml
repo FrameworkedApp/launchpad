@@ -14,7 +14,7 @@ body:
       label: Install method
       description: Which install path did you use?
       options:
-        - Marketplace + plugin install (`/plugin install launchpad@builtform`)
+        - Marketplace + plugin install (`/plugin install launchpad@frameworked`)
         - Local-path marketplace (`/plugin marketplace add /absolute/path`)
         - Other
     validations:
@@ -72,7 +72,7 @@ body:
     id: marketplace-list
     attributes:
       label: Output of `/plugin marketplace list`
-      description: Run `/plugin marketplace list` inside Claude Code and paste the output. This shows whether the BuiltForm marketplace was actually registered.
+      description: Run `/plugin marketplace list` inside Claude Code and paste the output. This shows whether the Frameworked marketplace was actually registered.
       render: shell
     validations:
       required: false
@@ -80,7 +80,7 @@ body:
   - type: textarea
     id: plugin-info
     attributes:
-      label: Output of `/plugin info launchpad@builtform` (if any)
+      label: Output of `/plugin info launchpad@frameworked` (if any)
       description: If install partially succeeded, this shows what version landed.
       render: shell
     validations:

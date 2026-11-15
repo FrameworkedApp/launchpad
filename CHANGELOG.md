@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Tracked in [ROADMAP.md](ROADMAP.md). v2.1.x candidates carrying forward from v2.2.0: BL-365 (parallelize preflight probe dispatch + short-TTL cache), BL-367 (programmatic GitHub-repo linkage verification for provider project probes), BL-368 (DNS `dig +short --` sentinel bug), and BL-366 (18-item preflight polish). The v2.2 series lands the 15 operational/security infrastructure surfaces deferred from v2.0, plus BL-374 (TypeScript 5.x -> 6.x upgrade audit, seeded by v2.1.9), BL-375 (Prisma 6.x -> 7.x upgrade audit, seeded by v2.1.10), BL-377 through BL-385 (CI gate correctness, freshness-contract enforcement, lint parity, and scaffolder catalog follow-ups), BL-386 through BL-395 (Codex follow-ups), plus the 10 deferred stacks. See `docs/tasks/BACKLOG.md` for full scope.
 
+## [v2.4.0]
+
+The marketplace is renamed from `builtform` to `frameworked`, so new installs use `launchpad@frameworked`.
+
+### For LaunchPad users
+
+- **New install id: `launchpad@frameworked`.** The marketplace repository is the same. A `launchpad@builtform` install keeps working; on Claude Code it keeps receiving releases, on Codex it stops receiving them. The v2.4.0 release notes and [How It Works: Updating](docs/guides/HOW_IT_WORKS.md#updating) show how to move to the new name on each host.
+
+- **License holder is Frameworked LLC.** The MIT license is unchanged; only the copyright holder changes.
+
+### Plugin-internal changes
+
+- **Install-layout tests cover both cache names.** The catalog-path tests run against `cache/builtform/` and `cache/frameworked/`, since both stay in use.
+
 ## [v2.3.1]
 
 Stack filtering for scaffolded projects. `/lp-review` and `/lp-harden-plan` now read the stack names that `/lp-scaffold-stack` saves, instead of falling back to every reviewer.

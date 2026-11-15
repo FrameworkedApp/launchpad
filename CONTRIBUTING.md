@@ -14,7 +14,7 @@ pnpm install
 
 `pnpm install` also installs Lefthook git hooks. The first commit you make in the repo will trigger them.
 
-If you want the plugin loaded into your local Claude Code so you can use the `/lp-*` commands while you work, install it from the public BuiltForm catalog by following the steps in [README.md → Install](README.md#install). The catalog install pulls the latest released version, not your working-tree changes — contributors testing in-progress work locally should rely on `pnpm test` + `pnpm typecheck` + `pnpm lint` (below) plus the lefthook pre-commit gates rather than a live plugin install.
+If you want the plugin loaded into your local Claude Code so you can use the `/lp-*` commands while you work, install it from the public Frameworked catalog by following the steps in [README.md → Install](README.md#install). The catalog install pulls the latest released version, not your working-tree changes, so contributors testing in-progress work locally should rely on `pnpm test` + `pnpm typecheck` + `pnpm lint` (below) plus the lefthook pre-commit gates rather than a live plugin install.
 
 ## Running tests
 
@@ -45,7 +45,7 @@ All test suites must stay green before a PR is mergeable. CI runs them automatic
 
 ### Testing the Codex adapter
 
-Changes to the Codex manifest, router, or helper must keep the canonical `commands/`, `agents/`, and `skills/` trees unchanged. Run the Python adapter tests, then install your branch straight from this repository. This is the maintainer test route. Users install through the BuiltForm marketplace, as described in [How It Works: Codex](docs/guides/HOW_IT_WORKS.md#codex). Remove any marketplace install of LaunchPad first, so only one plugin named `launchpad` is present.
+Changes to the Codex manifest, router, or helper must keep the canonical `commands/`, `agents/`, and `skills/` trees unchanged. Run the Python adapter tests, then install your branch straight from this repository. This is the maintainer test route. Users install through the Frameworked marketplace, as described in [How It Works: Codex](docs/guides/HOW_IT_WORKS.md#codex). Remove any marketplace install of LaunchPad first, so only one plugin named `launchpad` is present.
 
 ```bash
 codex plugin marketplace add https://github.com/FrameworkedApp/launchpad.git --ref <your-branch>
@@ -65,7 +65,7 @@ Add and remove test installations through `codex plugin` commands only. Do not e
 
 ```
 launchpad/
-├── .claude-plugin/         # marketplace.json (catalog entry for the BuiltForm marketplace)
+├── .claude-plugin/         # marketplace.json (catalog entry for the Frameworked marketplace)
 ├── plugins/launchpad/      # the plugin itself
 │   ├── .claude-plugin/     # plugin.json (manifest)
 │   ├── commands/           # /lp-* slash commands (markdown + YAML frontmatter)
@@ -81,7 +81,7 @@ launchpad/
 
 Two products ship from this repo:
 
-- The **plugin** (`/plugin install launchpad@builtform`) — works in any brownfield repo
+- The **plugin** (`/plugin install launchpad@frameworked`): works in any brownfield repo
 - The **greenfield pipeline** (`/lp-brainstorm` → `/lp-pick-stack` → `/lp-scaffold-stack` → `/lp-define`): scaffolds a fresh monorepo via the plugin's kernel renderer (v2.1+; v0/v1 used `git clone … && ./scripts/setup/init-project.sh`, decommissioned in BL-247)
 
 Most contributions touch only `plugins/launchpad/`. Reference-monorepo changes (under `apps/`, `packages/`) are reviewed for whether they degrade the plugin path.

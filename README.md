@@ -56,7 +56,7 @@ LaunchPad is an **agentic coding harness**. It installs a governance kernel into
 
 Works on **brownfield** projects (add the plugin to an existing repo, run `/lp-define`, get the kernel retrofitted) and **greenfield** (run the `/lp-brainstorm` → `/lp-pick-stack` → `/lp-scaffold-stack` → `/lp-define` pipeline for a fresh project with the kernel materialized from scratch).
 
-LaunchPad ships under the **BuiltForm** marketplace at [github.com/FrameworkedApp](https://github.com/FrameworkedApp).
+LaunchPad ships under the **Frameworked** marketplace at [github.com/FrameworkedApp](https://github.com/FrameworkedApp).
 
 For the full pipeline narrative, see [HOW_IT_WORKS.md](docs/guides/HOW_IT_WORKS.md). For the architecture and design principles behind the kernel, see [METHODOLOGY.md](docs/guides/METHODOLOGY.md).
 
@@ -70,16 +70,18 @@ For the full pipeline narrative, see [HOW_IT_WORKS.md](docs/guides/HOW_IT_WORKS.
 
 ### Path 1: Add to any repo (Best for Brownfield)
 
-Inside Claude Code, in the project where you want the commands, register the BuiltForm marketplace and install the plugin. Copy-paste the two commands below into a fresh Claude Code session:
+Inside Claude Code, in the project where you want the commands, register the Frameworked marketplace and install the plugin. Copy-paste the two commands below into a fresh Claude Code session:
 
 ```
 /plugin marketplace add github:FrameworkedApp/marketplace
-/plugin install launchpad@builtform
+/plugin install launchpad@frameworked
 ```
 
 Restart Claude Code. All `/lp-*` commands are now available. Run `/lp-kickoff` to start.
 
-The marketplace registration step is required today because BuiltForm is awaiting confirmation in the Anthropic public plugin registry. Once Anthropic confirms BuiltForm, `/plugin install launchpad@builtform` will work on its own and the `marketplace add` line above will no longer be necessary. Until then, run both lines.
+The marketplace registration step is required today because Frameworked is awaiting confirmation in the Anthropic public plugin registry. Once Anthropic confirms Frameworked, `/plugin install launchpad@frameworked` will work on its own and the `marketplace add` line above will no longer be necessary. Until then, run both lines.
+
+Installed LaunchPad before 2.4.0? The marketplace was named `builtform` until then. Your `launchpad@builtform` install keeps working; [How It Works: Updating](docs/guides/HOW_IT_WORKS.md#updating) (Claude Code) and [Updating and removing on Codex](docs/guides/HOW_IT_WORKS.md#updating-and-removing-on-codex) show how to move it to `launchpad@frameworked`.
 
 ### Path 2: Fresh monorepo (Best for Greenfield)
 
@@ -97,7 +99,7 @@ Don't `npm init`, don't drop in a `pyproject.toml`, don't open the folder in Fin
 
 ```
 /plugin marketplace add github:FrameworkedApp/marketplace
-/plugin install launchpad@builtform
+/plugin install launchpad@frameworked
 ```
 
 Restart Claude Code.
@@ -112,11 +114,11 @@ The pipeline scaffolds a fresh monorepo with `package.json`, `lefthook.yml`, the
 
 ### Codex
 
-LaunchPad also runs on Codex, installed from the same BuiltForm marketplace. It is the same plugin: Codex reads the same command, agent, and skill files that Claude Code reads, through a single router. Nothing changes for Claude Code users.
+LaunchPad also runs on Codex, installed from the same Frameworked marketplace. It is the same plugin: Codex reads the same command, agent, and skill files that Claude Code reads, through a single router. Nothing changes for Claude Code users.
 
 ```bash
 codex plugin marketplace add FrameworkedApp/marketplace
-codex plugin add launchpad@builtform
+codex plugin add launchpad@frameworked
 ```
 
 Start a new Codex session. Every `/lp-<name>` command in this README is `$launchpad:lp <name>` on Codex, so `/lp-kickoff` becomes `$launchpad:lp kickoff`. Run `$launchpad:lp help` to list every command.
@@ -247,7 +249,7 @@ LaunchPad/
 │   └── marketplace.json        # name=launchpad
 ├── plugins/launchpad/          # the plugin itself
 │   ├── .claude-plugin/
-│   │   └── plugin.json         # name=launchpad, version=2.3.1
+│   │   └── plugin.json         # name=launchpad, version=2.4.0
 │   ├── .codex-plugin/
 │   │   └── plugin.json         # Codex package manifest
 │   ├── commands/               # /lp-* slash commands
@@ -338,7 +340,7 @@ Install LaunchPad and run `/lp-kickoff` in the repo you are actively shipping fr
 
 ```
 /plugin marketplace add github:FrameworkedApp/marketplace
-/plugin install launchpad@builtform
+/plugin install launchpad@frameworked
 ```
 
 Restart Claude Code, then run `/lp-kickoff`. On Codex, install with the two commands under [Codex](#codex), then run `$launchpad:lp kickoff`.
@@ -359,7 +361,7 @@ Cost: about 30 minutes of install plus the first `/lp-define`. Plugin is MIT and
 - [How It Works](docs/guides/HOW_IT_WORKS.md): day-to-day operator's manual
 - [Methodology](docs/guides/METHODOLOGY.md): architecture, design principles, credits
 - [Repository structure](docs/architecture/REPOSITORY_STRUCTURE.md): file-placement decision tree
-- [Release notes](docs/releases/v2.3.1.md)
+- [Release notes](docs/releases/v2.4.0.md)
 - [Contributing](CONTRIBUTING.md)
 
 ---

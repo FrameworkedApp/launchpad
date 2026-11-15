@@ -290,7 +290,10 @@ LEAKAGE_SCAN_PATHS = (
 
 # Per-file leakage-scan allowlist (Option A — preserve "BuiltForm" public
 # umbrella brand). The "builtform" org/marketplace name was deliberately
-# minted at v1.0.0 ship as the public umbrella brand; scrubbing it would
+# minted at v1.0.0 ship as the public umbrella brand. The marketplace was
+# renamed to "frameworked" at v2.4.0 and the org to FrameworkedApp, but
+# the old name stays in shipped history and in the migration notes for
+# users who installed before v2.4.0; scrubbing it would
 # require rewriting already-shipped v1.x release notes (immutable history)
 # and the marketplace.json that downstream installers point at. The hard-
 # rule applies to private-origin LEAKAGE in NEW v2.0+ artifacts, NOT to
