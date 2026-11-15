@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Tracked in [ROADMAP.md](ROADMAP.md). v2.1.x candidates carrying forward from v2.2.0: BL-365 (parallelize preflight probe dispatch + short-TTL cache), BL-367 (programmatic GitHub-repo linkage verification for provider project probes), BL-368 (DNS `dig +short --` sentinel bug), and BL-366 (18-item preflight polish). The v2.2 series lands the 15 operational/security infrastructure surfaces deferred from v2.0, plus BL-374 (TypeScript 5.x -> 6.x upgrade audit, seeded by v2.1.9), BL-375 (Prisma 6.x -> 7.x upgrade audit, seeded by v2.1.10), BL-377 through BL-385 (CI gate correctness, freshness-contract enforcement, lint parity, and scaffolder catalog follow-ups), BL-386 through BL-395 (Codex follow-ups), plus the 10 deferred stacks. See `docs/tasks/BACKLOG.md` for full scope.
 
+## [v2.3.1]
+
+Stack filtering for scaffolded projects. `/lp-review` and `/lp-harden-plan` now read the stack names that `/lp-scaffold-stack` saves, instead of falling back to every reviewer.
+
+### For LaunchPad users
+
+- **Stack filtering works for scaffolded projects.** A config such as `stacks: [hono, generic]` no longer raises `unknown stack id(s)`; catalog names are mapped to stack ids before the agent stack filter matches reviewers, and an unknown name is still reported. Projects scaffolded from `django` or `fastapi` get the Python reviewer in a newly generated `agents.yml`; add it by hand or re-run `/lp-define` for an existing one.
+
+### Plugin-internal changes
+
+- **One alias table.** `lp_pick_stack/stack_aliases.py` owns the mapping from catalog names to stack ids, and the scaffold decision, bootstrap enrichers, `/lp-define` and the agent stack filter all use it. `SCAFFOLD_HANDSHAKE.md` section 10.v2.3.1 records the change.
+
 ## [v2.3.0]
 
 Planning and building in separate sessions. The new `/lp-conductor` command coordinates a planning session and a building session, and worktree commits work under folders with spaces.
@@ -596,7 +608,8 @@ Carried forward into v1.1:
 
 Full v1.1 scope in [ROADMAP.md](ROADMAP.md).
 
-[Unreleased]: https://github.com/FrameworkedApp/launchpad/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/FrameworkedApp/launchpad/compare/v2.3.1...HEAD
+[v2.3.1]: https://github.com/FrameworkedApp/launchpad/compare/v2.3.0...v2.3.1
 [v2.3.0]: https://github.com/FrameworkedApp/launchpad/compare/v2.2.2...v2.3.0
 [v2.2.2]: https://github.com/builtform/launchpad/compare/v2.2.1...v2.2.2
 [v2.2.1]: https://github.com/builtform/launchpad/compare/v2.2.0...v2.2.1
