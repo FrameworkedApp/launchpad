@@ -196,7 +196,7 @@ LaunchPad is MIT-licensed and open-source. Every claim above maps to a file you 
 | 43 commands, 39 agents, 16 skills    | Browse `plugins/launchpad/commands/`, `plugins/launchpad/agents/`, `plugins/launchpad/skills/`.                                                                                                                             |
 | Multi-agent review dispatch          | Read `.launchpad/agents.yml` and the 16 review agents in `plugins/launchpad/agents/review/`. Dispatch logic is in the `/lp-review` command file.                                                                            |
 | 0.60 confidence threshold + P1 floor | Specified in the `/lp-review` command file and enforced in code. Suppression audit trail at `.harness/observations/`.                                                                                                       |
-| Stack-aware dispatch                 | `stack_scope:` frontmatter on every agent file. Test coverage: `test_define` + `test_pipeline_matrix` (1,457 passing as of v2.1.3).                                                                                         |
+| Stack-aware dispatch                 | `stack_scope:` frontmatter on every agent file. Test coverage: `test_define` + `test_pipeline_matrix`, part of the Python suite (more than 2,500 tests passing at v2.4.0).                                                  |
 | Content-hash audit log               | Open `.launchpad/audit.log` and read an entry. Schema: ISO timestamp, git user, commit SHA, command, content hash.                                                                                                          |
 | Integrity guard refusal              | Code-level check in `/lp-build`. Regression test arms the hostile-PR pattern and asserts the refusal.                                                                                                                       |
 | Three-layer merge prevention         | Layer 1: refusal strings in `plugins/launchpad/commands/lp-ship.md` and `plugins/launchpad/commands/lp-commit.md`. Layer 2: PreToolUse hook. Layer 3: GitHub branch protection rules. All three visible in the public repo. |
@@ -218,9 +218,11 @@ Each orchestrator checks a section's status before proceeding. You can run them 
 
 - **`/lp-kickoff`**: collaborative brainstorming with codebase research, writes a design doc to `docs/brainstorms/`, hands off to `/lp-define`.
 - **`/lp-define`**: seeds your architecture docs (PRD, tech stack, design system, app flow, backend, CI/CD) and section specs. Stack-aware: detects TypeScript / Python / polyglot projects and seeds `.launchpad/agents.yml` and `.launchpad/config.yml` accordingly.
-- **`/lp-plan`**: design workflow (when UI is involved) → `/lp-pnf` (Plan Next Feature) → `/lp-harden-plan` (multi-agent plan stress-test) → human approval gate.
+- **`/lp-plan`**: design workflow (when UI is involved) → `/lp-pnf` (Plan Next Feature) → `/lp-harden-plan` (multi-agent plan stress-test) → human approval gate. To build an approved plan step by step in your own session instead of autonomously, run `/lp-implement-plan`.
 - **`/lp-build`**: fully autonomous. `/lp-inf` (execute the plan) → `/lp-review` (multi-agent review with confidence scoring and FP suppression) → `/lp-resolve-todo-parallel` (fix findings) → `/lp-test-browser` → `/lp-ship` (opens PR, never merges) → `/lp-learn` (captures learnings).
 - **`/lp-update-identity`**: update sealed identity (project rename, license change, copyright holder, email, repo URL fill-in) without re-scaffolding. Re-renders the 7 kernel files via `KernelRenderer.refresh()`.
+
+For a change large enough to plan and build in separate sessions, run **`/lp-conductor`** after `/lp-define`. Your session becomes the Conductor. It prints a prompt for an Author session, which writes and hardens the plan, and later one for an Implementer session, which builds it in sections. The Conductor checks every delivery and checkpoint, answers routine questions, and brings you only the decisions that need you. The Author and Implementer can each run on Claude Code or Codex, and every push, PR and merge still needs your go-ahead.
 
 Full workflow guide: [HOW_IT_WORKS.md](docs/guides/HOW_IT_WORKS.md).
 
@@ -230,13 +232,13 @@ Full workflow guide: [HOW_IT_WORKS.md](docs/guides/HOW_IT_WORKS.md).
 
 LaunchPad ships as a plugin for Claude Code and Codex with:
 
-| Component       | Count     | What it covers                                                                          |
-| --------------- | --------- | --------------------------------------------------------------------------------------- |
-| Slash commands  | 43        | The brainstorm, define, plan, build, review, resolve, ship, and learn lifecycle         |
-| Sub-agents      | 39        | 6 namespaces: research, review, resolve, design, skills, document-review                |
-| Skills          | 16        | Reusable instruction sets for design, planning, review, compound docs                   |
-| Runtime scripts | several   | Stack detector, polyglot adapter, Jinja2 doc generator, install scripts                 |
-| Test suite      | 12 suites | Adapters, config loader, stack detector, pipeline integration, install-paths regression |
+| Component       | Count     | What it covers                                                                                                               |
+| --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Slash commands  | 43        | The brainstorm, define, plan, build, review, resolve, ship, and learn lifecycle, plus `/lp-conductor` for multi-session work |
+| Sub-agents      | 39        | 6 namespaces: research, review, resolve, design, skills, document-review                                                     |
+| Skills          | 16        | Reusable instruction sets for design, planning, review, compound docs                                                        |
+| Runtime scripts | several   | Stack detector, polyglot adapter, Jinja2 doc generator, install scripts                                                      |
+| Test suite      | 12 suites | Adapters, config loader, stack detector, pipeline integration, install-paths regression                                      |
 
 <details>
 <summary>Plugin structure</summary>
@@ -292,7 +294,7 @@ On Codex two of these layers are weaker: sub-agent tool restrictions are advisor
 - Have felt the pain of agent-context-loss between sessions and can name a specific instance.
 - Have had at least one near-miss with an AI commit: leaked secret, broken migration, file-structure drift, hallucinated API.
 - Are willing to invest about 30 minutes to install a kernel into their repo for a payoff measured in weeks.
-- Work in TypeScript, Python, or a polyglot mix (the stacks the v2.1 adapter set supports first-class).
+- Work in TypeScript, Python, Ruby on Rails, Go command-line tools, or a polyglot mix (the stacks LaunchPad's adapters support first-class).
 
 **LaunchPad is not for:**
 
@@ -307,7 +309,7 @@ Surfacing the anti-fit up front is intentional. If any of the above describes yo
 
 ## Methodology
 
-LaunchPad organizes AI-assisted development into six layers (Scaffold, Definition, Planning, Execution, Quality, Learning) with design principles (status contract, fresh-context loops, confidence scoring, compound learning) designed to keep agents honest.
+LaunchPad organizes AI-assisted development into six layers (Scaffold, Definition, Planning, Execution, Quality, Learning) with design principles (status contract, fresh-context loops, confidence scoring, compound learning, separate sessions for planning, building and checking) designed to keep agents honest.
 
 Full architecture, design principles, and credits: [METHODOLOGY.md](docs/guides/METHODOLOGY.md).
 
