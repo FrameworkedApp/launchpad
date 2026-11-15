@@ -4658,3 +4658,125 @@ The test passes or fails on the guard's behavior only. Cleanup of the scratch re
 **Proposed Fix** (revalidate before implementing)
 
 Reproduce first by running the test in a loop. Likely candidates: use pytest's `tmp_path` fixture, which does not fail a test on cleanup, or pass `ignore_cleanup_errors=True`; check whether a background Git process (for example `gc --auto` or the fsmonitor daemon) still writes into the directory at cleanup time and disable it in the scratch repository's configuration.
+
+---
+
+#### BL-399 - v2.3.x: Reconcile the stack family tables and decide the TypeScript family for catalog aliases
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Backend
+
+**Encountered**
+
+- **Date**: 2026-11-14
+- **Location**: `plugins/launchpad/scripts/plugin-agent-scope-filter.py:61-77`, `plugins/launchpad/scripts/plugin_stack_adapters/_package_managers.py:49-67`, `plugins/launchpad/scripts/lp_pick_stack/stack_aliases.py:21-33`
+- **Scenario**: Reviewing which agents each persisted stack id admits while adding the shared catalog alias table (v2.3.1).
+
+**Current Behavior**
+
+Two tables classify stack ids into families and they disagree. The agent filter's `typescript` family in `STACK_FAMILY_MEMBERS` lists `typescript`, `ts_monorepo`, `nextjs_standalone`, `nextjs_fastapi`, `nextjs_hono_cloudflare` and `nextjs_trpc_prisma`, and excludes `astro` and `generic`. `_package_managers.STACK_FAMILY` maps `astro` and `generic` to `ts` (the latter as a fail-safe default) and maps `nextjs_fastapi` to `ts_python`. Separately, the catalog aliases `hono` and `expo` canonicalize to `generic` (uncomposed), which belongs to no filter family, although both are TypeScript runtimes.
+
+No agent in the current corpus carries `stack:typescript`, so no roster differs today.
+
+**Desired Behavior**
+
+One documented answer to "which family is this stack id in", used by the agent filter and the package-manager data. The alias table's mapping for `hono` and `expo` is a deliberate, recorded choice rather than an accident of the fallback.
+
+**Proposed Fix** (revalidate before implementing)
+
+Decide first whether the filter family and the package-manager family are meant to be the same concept. If yes, derive both from one table and add a drift test that every active stack id has exactly one family in each consumer. If no, rename one so the vocabulary stops colliding, and document why `astro` is in `ts` for commands but not `typescript` for agents. Then decide whether `hono` and `expo` should canonicalize to a TypeScript-family id; note that `generic` is also the fail-safe for unknown stacks, so mapping to it loses the runtime signal.
+
+**Notes**
+
+Becomes live the moment any agent is tagged `stack:typescript`. Follow-up to v2.3.1 (PR #238). Related: BL-263 (django persistence widening).
+
+---
+
+#### BL-400 - v2.3.x: Generated `agents.yml` omits the TypeScript and frontend-races reviewers for single-app Next projects
+
+- **Priority**: P2
+- **Status**: TODO
+- **Area**: Backend
+
+**Encountered**
+
+- **Date**: 2026-11-14
+- **Location**: `plugins/launchpad/scripts/plugin_default_generators/agents.yml.j2:22` and `:66`
+- **Scenario**: Checking which reviewers a generated `agents.yml` gains for each canonical stack id after v2.3.1 made `canonical_stacks` available to the template.
+
+**Current Behavior**
+
+`lp-kieran-foad-ts-reviewer` (review roster) and `lp-frontend-races-reviewer` (conditional plan-hardening roster) are added only when `'ts_monorepo' in canonical_stacks`. A project whose canonical stacks are `nextjs_standalone` (the detector's single-app Next id, and the canonical id of the catalog `next` key), `nextjs_fastapi`, `nextjs_hono_cloudflare` or `nextjs_trpc_prisma` gets neither agent, although it is TypeScript with a React front end. The Python reviewer condition (`:25`) has the mirror gap: `nextjs_fastapi` has Python code but only `python_django` and `python_generic` match.
+
+**Desired Behavior**
+
+Every stack id with TypeScript code gets the TypeScript reviewer, and every stack id with React front-end code gets the frontend-races reviewer, in the generated roster. Every stack id with Python code gets the Python reviewer.
+
+**Proposed Fix** (revalidate before implementing)
+
+Replace the single-id tests with membership in per-agent id sets kept next to `STACK_ID_ACTIVE_ENUM`, or reuse the filter's family table once BL-399 settles it. Decide per id whether `astro` and `ts_monorepo` count as React front ends for the races reviewer. Add a test that renders `agents.yml` for every active stack id and asserts the expected reviewer set, so a new stack id cannot silently omit its language reviewer. Existing generated `agents.yml` files are not rewritten (the file is protected from overwrite), so the release notes should say a re-run of `/lp-define` with the overwrite menu is needed to pick up the change.
+
+**Notes**
+
+Independent of the alias work: the gap exists for detector-emitted ids as well as catalog aliases. Follow-up to v2.3.1 (PR #238). Related: BL-399.
+
+---
+
+#### BL-401 - v2.3.x: Report unknown stack ids instead of silently dropping them in `read_enricher_stacks`
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Backend
+
+**Encountered**
+
+- **Date**: 2026-11-14
+- **Location**: `plugins/launchpad/scripts/lp_bootstrap/_enricher_common.py:76-94`
+- **Scenario**: Comparing how each consumer of persisted stack ids treats an id outside the closed enum.
+
+**Current Behavior**
+
+`read_enricher_stacks` canonicalizes configured stacks and then keeps only ids in `STACK_ID_ACTIVE_ENUM` (line 94). A mistyped or retired id such as `nextjs-standalone` is dropped without a message, and an enricher that receives an empty list falls back to its stack-agnostic default. The function also returns an empty list on any exception (the `except Exception` at the end), so a genuine read or import failure looks the same as a project with no stacks. The agent stack filter, by contrast, raises `ValueError` naming the unknown ids.
+
+**Desired Behavior**
+
+An unknown stack id in `config.yml` produces a visible warning that names the id and the accepted vocabulary, from the same shared check the agent filter uses, while the enrichers still degrade to their defaults rather than failing a bootstrap. Read and import failures are distinguishable from "no stacks configured".
+
+**Proposed Fix** (revalidate before implementing)
+
+Split the unknown ids out of the comprehension and emit one warning per bootstrap run (not per enricher; five enrichers call this function). Share the accepted-id computation with the filter so the two cannot drift. Keep the return type, and keep degraded behavior for callers; do not turn a warning into a hard failure without checking how `/lp-bootstrap` refresh treats it.
+
+**Notes**
+
+Pre-existing behavior, kept unchanged in v2.3.1 to limit the patch to the alias fix. Follow-up to v2.3.1 (PR #238).
+
+---
+
+#### BL-402 - v2.3.x: `/lp-define --redetect-stack` compares persisted catalog ids with detector ids
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Backend
+
+**Encountered**
+
+- **Date**: 2026-11-14
+- **Location**: `plugins/launchpad/scripts/lp_define_runner.py:1107-1111` (`redetect_stack`)
+- **Scenario**: Tracing every reader of `config.yml` `stacks:` after adding the shared alias table.
+
+**Current Behavior**
+
+`redetect_stack` compares `read_stacks(repo_root)` (the persisted list, which for a scaffolded project holds scaffolders.yml keys such as `next` and `hono`, copied from the scaffold receipt) with the detector's ids (`nextjs_standalone`, `generic`, and so on) using plain list equality. The two are different vocabularies, so a scaffolded project reports a mismatch on every run, exits 65 without `--force`, and with `--force` overwrites the persisted catalog ids with detector ids.
+
+**Desired Behavior**
+
+The comparison happens in one vocabulary: persisted ids are canonicalized before comparing, so a scaffolded project whose detected stack matches its persisted stack is a no-op. When the ids genuinely differ, the message says so in canonical terms. Whether `--force` should keep the user's catalog ids when the canonical forms agree is decided deliberately.
+
+**Proposed Fix** (revalidate before implementing)
+
+Compare `canonical_stack_ids(persisted)` with `canonical_stack_ids(detected)`, order-insensitively if the detector's ordering is not stable against receipt ordering (check both orders first). Add tests for a scaffolded config (`[next, hono]` against a detector result of `nextjs_hono_cloudflare`) and for a real mismatch. Note that the detector reports a composition from files on disk and may not reproduce the catalog composition exactly (for example a Next front end plus an API detected as separate ids); verify against real scaffold output before declaring equality.
+
+**Notes**
+
+The mismatch was cosmetic before v2.3.1 and stays so; v2.3.1 made the canonical form available through `lp_pick_stack/stack_aliases.py`. Follow-up to v2.3.1 (PR #238).
