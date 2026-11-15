@@ -6,7 +6,7 @@
 
 LaunchPad ships versioned releases via the GitHub release flow. Every release follows this exact sequence to ensure each tag has hand-authored release notes published as a durable artifact in the repo.
 
-Codex adapter releases: bump `plugins/launchpad/.claude-plugin/plugin.json` and `plugins/launchpad/.codex-plugin/plugin.json` together, then complete the checks below before tagging. They require a logged-in Codex command line, `jq`, and the release branch, tag, or commit in `<release-ref>`. This direct install from the LaunchPad repository is the maintainer test route. Users install through the BuiltForm marketplace.
+Codex adapter releases: bump `plugins/launchpad/.claude-plugin/plugin.json` and `plugins/launchpad/.codex-plugin/plugin.json` together, then complete the checks below before tagging. They require a logged-in Codex command line, `jq`, and the release branch, tag, or commit in `<release-ref>`. This direct install from the LaunchPad repository is the maintainer test route. Users install through the Frameworked marketplace.
 
 ```bash
 # Install check: install the release candidate and verify the required installed files.
@@ -30,16 +30,16 @@ codex plugin marketplace remove launchpad --json
 
 The install check passes when the plugin advertises `launchpad:lp` and all three installed-path checks exit zero. The help check passes when the transcript contains the helper's raw inventory JSON, the final message is a readable list, and `diff` exits zero.
 
-After the tag is pushed, the `verify-v2-ship` workflow checks the release and then fast-forwards the `stable` branch to the tag. The BuiltForm marketplace pins `stable`, so users on both hosts receive the release at that moment and nothing changes in the marketplace repository. Confirm that the workflow run is green and that `git ls-remote origin stable` shows the tag's commit. `stable` only moves forward: to withdraw a release, ship a fix as a new patch release. Then confirm the user install route once on Codex:
+After the tag is pushed, the `verify-v2-ship` workflow checks the release and then fast-forwards the `stable` branch to the tag. The Frameworked marketplace pins `stable`, so users on both hosts receive the release at that moment and nothing changes in the marketplace repository. Confirm that the workflow run is green and that `git ls-remote origin stable` shows the tag's commit. `stable` only moves forward: to withdraw a release, ship a fix as a new patch release. Then confirm the user install route once on Codex:
 
 If verification fails for a transient reason, rerun the failed jobs of the original tag-push run with `gh run rerun <run-id> --failed`. A rerun keeps the push event, so promotion still happens. The manual `workflow_dispatch` lane verifies a tag but never moves `stable`.
 
 ```bash
 codex plugin marketplace add FrameworkedApp/marketplace
-codex plugin add launchpad@builtform
+codex plugin add launchpad@frameworked
 codex exec '$launchpad:lp help'
-codex plugin remove launchpad@builtform
-codex plugin marketplace remove builtform
+codex plugin remove launchpad@frameworked
+codex plugin marketplace remove frameworked
 ```
 
 Whenever these checks are rerun, update the "As of" and "Last checked" dates and the Codex version in `README.md` and `docs/guides/HOW_IT_WORKS.md`.

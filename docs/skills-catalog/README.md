@@ -18,7 +18,7 @@ you can browse what's available and port what you need.
 ## Harness Skills vs Catalog Skills
 
 **Harness skills** (16 skills shipped under `plugins/launchpad/skills/`, installed
-to `${CLAUDE_PLUGIN_ROOT}/skills/` after `/plugin install launchpad@builtform`)
+to `${CLAUDE_PLUGIN_ROOT}/skills/` after `/plugin install launchpad@frameworked`)
 auto-load in every project and power the LaunchPad workflow:
 
 1. `lp-brainstorming` — structured brainstorming sessions

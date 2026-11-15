@@ -40,16 +40,16 @@ Commands appear in their Claude Code form, `/lp-<name>`. On Codex the same comma
 
 ### Path 1 — Add to any repo (Brownfield)
 
-Inside Claude Code, in the project where you want the commands, register the BuiltForm marketplace and install the plugin. Copy-paste the two commands below into a fresh Claude Code session:
+Inside Claude Code, in the project where you want the commands, register the Frameworked marketplace and install the plugin. Copy-paste the two commands below into a fresh Claude Code session:
 
 ```
 /plugin marketplace add github:FrameworkedApp/marketplace
-/plugin install launchpad@builtform
+/plugin install launchpad@frameworked
 ```
 
 Restart Claude Code. All `/lp-*` commands are now available. Run `/lp-kickoff` to start.
 
-The `marketplace add` step is required today because BuiltForm is awaiting confirmation in the Anthropic public plugin registry. Once Anthropic confirms BuiltForm, `/plugin install launchpad@builtform` will work on its own and the `marketplace add` line will no longer be necessary. Until then, run both lines.
+The `marketplace add` step is required today because Frameworked is awaiting confirmation in the Anthropic public plugin registry. Once Anthropic confirms Frameworked, `/plugin install launchpad@frameworked` will work on its own and the `marketplace add` line will no longer be necessary. Until then, run both lines.
 
 ### Path 2 — Fresh monorepo (Greenfield)
 
@@ -75,7 +75,7 @@ Don't `npm init`, don't drop in a `pyproject.toml`, don't open the folder in Fin
 
 ### Verifying installation
 
-After restart, type `/lp-` and Claude Code should autocomplete with LaunchPad commands. You can also confirm via `claude plugin list` in your terminal: LaunchPad should appear with the version from `plugins/launchpad/.claude-plugin/plugin.json` and marketplace `builtform`.
+After restart, type `/lp-` and Claude Code should autocomplete with LaunchPad commands. You can also confirm via `claude plugin list` in your terminal: LaunchPad should appear with the version from `plugins/launchpad/.claude-plugin/plugin.json` and marketplace `frameworked` (`builtform` if you installed before 2.4.0).
 
 ### Install scopes
 
@@ -90,27 +90,29 @@ v2.x greenfield projects scaffolded via `/lp-brainstorm` → `/lp-pick-stack` �
 ### Updating
 
 ```
-/plugin marketplace update builtform
+/plugin marketplace update frameworked
 /plugin uninstall launchpad --scope <same-scope>
-/plugin install launchpad@builtform --scope <same-scope>
+/plugin install launchpad@frameworked --scope <same-scope>
 ```
 
-Restart Claude Code after updating. The install cache (`~/.claude/plugins/cache/builtform/launchpad/<version>/`) is a snapshot taken at install time, so uninstall + marketplace-update + reinstall is the supported refresh flow.
+Restart Claude Code after updating. The install cache (`~/.claude/plugins/cache/frameworked/launchpad/<version>/`) is a snapshot taken at install time, so uninstall + marketplace-update + reinstall is the supported refresh flow.
+
+**Installed before 2.4.0?** The marketplace was named `builtform` until 2.4.0. A `launchpad@builtform` install keeps working and keeps updating; its cache is under `~/.claude/plugins/cache/builtform/`. To move to the new name, run `/plugin marketplace remove builtform` (this also uninstalls its plugins), `/plugin marketplace add github:FrameworkedApp/marketplace`, then `/plugin install launchpad@frameworked`.
 
 ---
 
 ## Codex
 
-Codex installs the same plugin from the same BuiltForm marketplace as Claude Code, so both hosts run the same pinned release. One rule converts everything in this guide: where it writes `/lp-<name>`, type `$launchpad:lp <name>`. `/lp-review` becomes `$launchpad:lp review`.
+Codex installs the same plugin from the same Frameworked marketplace as Claude Code, so both hosts run the same pinned release. One rule converts everything in this guide: where it writes `/lp-<name>`, type `$launchpad:lp <name>`. `/lp-review` becomes `$launchpad:lp review`.
 
 ### Installing on Codex
 
 ```bash
 codex plugin marketplace add FrameworkedApp/marketplace
-codex plugin add launchpad@builtform
+codex plugin add launchpad@frameworked
 ```
 
-Start a new Codex session and run `$launchpad:lp help`. It lists every available command with a one-line description. `codex plugin list` should show `launchpad@builtform` as installed and enabled.
+Start a new Codex session and run `$launchpad:lp help`. It lists every available command with a one-line description. `codex plugin list` should show `launchpad@frameworked` as installed and enabled.
 
 The Codex desktop app and the command line share one plugin configuration, so these commands serve both. If you use only the desktop app and `codex` is not on your PATH, the same binary ships inside the app; on macOS it is `/Applications/ChatGPT.app/Contents/Resources/codex`.
 
@@ -119,15 +121,24 @@ The Codex desktop app and the command line share one plugin configuration, so th
 Update:
 
 ```bash
-codex plugin marketplace upgrade builtform
-codex plugin add launchpad@builtform
+codex plugin marketplace upgrade frameworked
+codex plugin add launchpad@frameworked
 ```
 
 Remove:
 
 ```bash
+codex plugin remove launchpad@frameworked
+codex plugin marketplace remove frameworked
+```
+
+**Installed before 2.4.0?** The marketplace was named `builtform` until 2.4.0. A `launchpad@builtform` install keeps working on Codex but no longer receives updates: `codex plugin marketplace upgrade builtform` reports a name mismatch. To move to the new name, remove the plugin first (removing a Codex marketplace does not uninstall its plugins):
+
+```bash
 codex plugin remove launchpad@builtform
 codex plugin marketplace remove builtform
+codex plugin marketplace add FrameworkedApp/marketplace
+codex plugin add launchpad@frameworked
 ```
 
 ### Running commands on Codex
@@ -864,16 +875,16 @@ Print the current canonical hash with `${CLAUDE_PLUGIN_ROOT}/scripts/plugin-conf
 ### Updating the plugin
 
 ```
-/plugin marketplace update builtform
+/plugin marketplace update frameworked
 /plugin uninstall launchpad --scope <same-scope>
-/plugin install launchpad@builtform --scope <same-scope>
+/plugin install launchpad@frameworked --scope <same-scope>
 ```
 
 Restart Claude Code after updating.
 
 ### Refreshing a stale plugin cache
 
-The plugin cache at `~/.claude/plugins/cache/builtform/launchpad/<version>/` is a snapshot taken at install time. After updating LaunchPad, always refresh via the uninstall + marketplace-update + reinstall flow above, the cache does not update in place.
+The plugin cache at `~/.claude/plugins/cache/frameworked/launchpad/<version>/` is a snapshot taken at install time. After updating LaunchPad, always refresh via the uninstall + marketplace-update + reinstall flow above, the cache does not update in place.
 
 ---
 

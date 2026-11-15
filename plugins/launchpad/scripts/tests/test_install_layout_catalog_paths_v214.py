@@ -28,18 +28,25 @@ Tests:
 
   * `test_full_pipeline_runs_against_simulated_install_layout`: install-
     layout E2E. Builds a tempdir tree mirroring the real
-    `~/.claude/plugins/cache/builtform/launchpad/<VERSION>/` install
+    `~/.claude/plugins/cache/<marketplace>/launchpad/<VERSION>/` install
     shape, then drives /lp-pick-stack (manual-override `generic`) +
     /lp-scaffold-stack with the catalogs pointed at the simulated
     install's files via the public --scaffolders-yml /
     --category-patterns-yml override surface. Pre-fix the receipt
     failed at `catalog_load_failed`; post-fix it succeeds.
+
+The marketplace was named `builtform` until v2.4.0 and `frameworked`
+after it. Claude Code keeps an existing install under its original
+marketplace name, so both cache layouts stay live; the install-layout
+tests run against each.
 """
 from __future__ import annotations
 
 import shutil
 import sys
 from pathlib import Path
+
+import pytest
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -83,8 +90,13 @@ def test_default_paths_resolve_in_source_repo():
 
 # ---------- Install-layout regression: path arithmetic ----------
 
+# Marketplace cache directory names: `builtform` before v2.4.0,
+# `frameworked` from v2.4.0. Both layouts stay live (see module docstring).
+MARKETPLACE_NAMES = ("builtform", "frameworked")
 
-def test_path_arithmetic_works_in_install_layout():
+
+@pytest.mark.parametrize("marketplace", MARKETPLACE_NAMES)
+def test_path_arithmetic_works_in_install_layout(marketplace: str):
     """v2.1.4 BL-327 regression pin. Mimic the path arithmetic engine.py
     runs at import time, against a synthetic path that looks like the
     v2.1 Claude Code marketplace cache layout. Asserts the resolved
@@ -107,11 +119,11 @@ def test_path_arithmetic_works_in_install_layout():
     `scaffolders.yml` directly (no `plugins/launchpad/` infix).
     """
     fake_engine = Path(
-        "/Users/example/.claude/plugins/cache/builtform/launchpad/"
+        f"/Users/example/.claude/plugins/cache/{marketplace}/launchpad/"
         "2.1.4/scripts/lp_scaffold_stack/engine.py"
     )
     expected_install_root = Path(
-        "/Users/example/.claude/plugins/cache/builtform/launchpad/2.1.4"
+        f"/Users/example/.claude/plugins/cache/{marketplace}/launchpad/2.1.4"
     )
     # Install-aware path: parents[2] = version-suffixed install root.
     install_root = fake_engine.parents[2]
@@ -139,7 +151,7 @@ def test_path_arithmetic_works_in_install_layout():
     ) == expected_category
 
     # Pre-v2.1.4 bad path shape — explicit rejection. parents[4] is the
-    # `builtform/` dir in the install layout; joining `plugins/launchpad/
+    # `<marketplace>/` dir in the install layout; joining `plugins/launchpad/
     # scaffolders.yml` produced the observed broken path.
     bad_path = (
         fake_engine.parents[4] / "plugins" / "launchpad" / "scaffolders.yml"
@@ -152,20 +164,21 @@ def test_path_arithmetic_works_in_install_layout():
 # ---------- Install-layout regression: full pipeline ----------
 
 
-def _build_simulated_install_tree(tmp_path: Path) -> Path:
+def _build_simulated_install_tree(tmp_path: Path, marketplace: str) -> Path:
     """Build the v2.1 Claude Code marketplace cache layout under tmp_path.
 
     Returns the simulated `<install-root>` (the version-suffixed dir
     that holds scaffolders.yml + scripts/). The layout matches the real
-    install at `~/.claude/plugins/cache/builtform/launchpad/<VERSION>/`
-    (verified 2026-05-14 against the on-disk v2.1.2 install).
+    install at `~/.claude/plugins/cache/<marketplace>/launchpad/<VERSION>/`
+    (verified 2026-05-14 against the on-disk v2.1.2 install), where
+    `<marketplace>` is `builtform` or `frameworked`.
     """
     fake_install = (
         tmp_path
         / ".claude"
         / "plugins"
         / "cache"
-        / "builtform"
+        / marketplace
         / "launchpad"
         / "2.1.4"
     )
@@ -188,7 +201,10 @@ def _build_simulated_install_tree(tmp_path: Path) -> Path:
     return fake_install
 
 
-def test_full_pipeline_runs_against_simulated_install_layout(tmp_path: Path):
+@pytest.mark.parametrize("marketplace", MARKETPLACE_NAMES)
+def test_full_pipeline_runs_against_simulated_install_layout(
+    tmp_path: Path, marketplace: str
+):
     """v2.1.4 BL-327 end-to-end. Build the install layout, drive
     /lp-pick-stack (manual-override `generic`) → /lp-scaffold-stack with
     catalogs from the install tree, assert the receipt is written and
@@ -201,7 +217,7 @@ def test_full_pipeline_runs_against_simulated_install_layout(tmp_path: Path):
     flow against the install tree shape so future regressions in the
     dispatch or loader paths are caught.
     """
-    install_root = _build_simulated_install_tree(tmp_path)
+    install_root = _build_simulated_install_tree(tmp_path, marketplace)
     install_scaffolders = install_root / "scaffolders.yml"
     install_category = (
         install_root

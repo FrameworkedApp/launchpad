@@ -104,10 +104,12 @@ COMMAND_NAME = "/lp-scaffold-stack"
 #       parents[3]=plugins/   parents[4]=<repo>
 #
 #  2. Installed plugin (Claude Code marketplace cache):
-#       ~/.claude/plugins/cache/builtform/launchpad/<VERSION>/scripts/lp_scaffold_stack/engine.py
+#       ~/.claude/plugins/cache/<marketplace>/launchpad/<VERSION>/scripts/lp_scaffold_stack/engine.py
 #       parents[0]=lp_scaffold_stack/  parents[1]=scripts/
 #       parents[2]=<VERSION>/  ←  contains scaffolders.yml + scripts/
-#       parents[3]=launchpad/   parents[4]=builtform/
+#       parents[3]=launchpad/   parents[4]=<marketplace>/
+#     <marketplace> is `frameworked` from v2.4.0 and `builtform` for
+#     installs made before it; nothing below depends on the name.
 #
 # Pre-v2.1.4 the defaults were `parents[4] / "plugins" / "launchpad" /
 # scaffolders.yml`. That resolved correctly in (1) (because parents[4]

@@ -1,5 +1,5 @@
 {
-  "instructions": "This is a Claude Code plugin repo. The plugin lives under plugins/launchpad/ and is published to the BuiltForm marketplace. Focus on cross-file consistency between commands/, agents/, and skills/ — naming conventions (lp- prefix universal), agents.yml dispatch references, plugin.json manifest correctness, and inter-file invariants the existing CI checks (Type Check, Lint, Build, Test, Repo Structure, Install) cannot catch. Trust the existing CI for lint/format/typecheck. Codex Code Review is the line-level reviewer; Greptile fills the codebase-wide / cross-file lane.",
+  "instructions": "This is a Claude Code plugin repo. The plugin lives under plugins/launchpad/ and is published to the Frameworked marketplace. Focus on cross-file consistency between commands/, agents/, and skills/: naming conventions (lp- prefix universal), agents.yml dispatch references, plugin.json manifest correctness, and inter-file invariants the existing CI checks (Type Check, Lint, Build, Test, Repo Structure, Install) cannot catch. Trust the existing CI for lint/format/typecheck. Codex Code Review is the line-level reviewer; Greptile fills the codebase-wide / cross-file lane.",
   "commentTypes": ["logic", "syntax", "style"],
   "strictness": 1,
   "triggerOnUpdates": true,
