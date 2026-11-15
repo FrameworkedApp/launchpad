@@ -5,7 +5,7 @@
     "url": "https://github.com/foadshafighi"
   },
   "metadata": {
-    "description": "Single-plugin marketplace for local LaunchPad development. Public install path is the BuiltForm catalog at github.com/FrameworkedApp/marketplace — install via `/plugin marketplace add github:FrameworkedApp/marketplace` and `/plugin install launchpad@builtform`. This file exists only to support directory-based dogfooding of unreleased changes; it is intentionally NOT a documented install path."
+    "description": "Single-plugin marketplace for local LaunchPad development. Public install path is the Frameworked catalog at github.com/FrameworkedApp/marketplace; install via `/plugin marketplace add github:FrameworkedApp/marketplace` and `/plugin install launchpad@frameworked`. This file exists only to support directory-based dogfooding of unreleased changes; it is intentionally NOT a documented install path."
   },
   "plugins": [
     {

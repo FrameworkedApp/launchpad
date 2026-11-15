@@ -1,10 +1,10 @@
 # Growth (Internal)
 
-This folder holds **internal positioning, sales-pitch, and copy strategy work** for LaunchPad and the broader BuiltForm product line. Everything inside is gitignored except this README — the artifacts here are produced by the [Growth Toolkit](https://github.com/FrameworkedApp/marketplace) plugin and consumed by maintainers when rewriting marketing surfaces.
+This folder holds **internal positioning, sales-pitch, and copy strategy work** for LaunchPad and the broader Frameworked product line. Everything inside is gitignored except this README; the artifacts here are produced by the [Growth Toolkit](https://github.com/FrameworkedApp/marketplace) plugin and consumed by maintainers when rewriting marketing surfaces.
 
 ## Why this folder exists
 
-LaunchPad ships under the BuiltForm marketplace, which lists two plugins:
+LaunchPad ships under the Frameworked marketplace, which lists two plugins:
 
 - **LaunchPad** — the public, MIT-licensed agentic coding harness you're reading the source of.
 - **Growth Toolkit** — a separate **paid** plugin that produces strategic and conversion-optimized go-to-market work: customer positioning, sales-pitch storyboards, lead-generation plans, money-model blueprints, and page copy.
@@ -13,14 +13,14 @@ Growth Toolkit is built on the same agentic-harness pattern as LaunchPad but app
 
 ## Where to get Growth Toolkit
 
-Growth Toolkit lives in the BuiltForm marketplace alongside LaunchPad:
+Growth Toolkit lives in the Frameworked marketplace alongside LaunchPad:
 
 ```
 /plugin marketplace add github:FrameworkedApp/marketplace
-/plugin install growth-toolkit@builtform
+/plugin install growth-toolkit@frameworked
 ```
 
-Install requires repository access. Growth Toolkit is a private repo; request access via the BuiltForm marketplace issue tracker.
+Install requires repository access. Growth Toolkit is a private repo; request access via the Frameworked marketplace issue tracker.
 
 ## What this folder contains (when populated)
 
