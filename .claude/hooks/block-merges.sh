@@ -509,11 +509,35 @@ if [ "$A_BODY" = 1 ] || [ "$B_BODY" = 1 ]; then
   exit 2
 fi
 
+# A gh command written with $'...' quoting is blocked: Bash decodes those
+# escapes after the text checks below have run, so `gh alias $'s\x65t'` would
+# pass them as something other than `set`.
+if [ "$(grep_status -F "\$'" "$JOINED")" != 1 ] && \
+   [ "$(grep_status -E '(^|[^A-Za-z0-9_-])gh([[:space:]]|$)' "$UNQUOTED")" != 1 ]; then
+  echo "BLOCKED: gh commands written with \$'...' quoting are prohibited; write the words plainly." >&2
+  exit 2
+fi
+
 # A gh alias or extension can wrap any gh command (gh pr merge --admin
-# included) under a name no check here recognizes, so defining one is blocked.
-GH_WRAP_RE='(^|[^A-Za-z0-9_-])gh([[:space:]]+-[^[:space:]]+)*[[:space:]]+(alias|extension|extensions|ext)[[:space:]]+(set|import|install|upgrade|create|exec)'
-if [ "$(grep_status -E "$GH_WRAP_RE" "$UNQUOTED")" != 1 ]; then
-  echo "BLOCKED: defining or running gh aliases and extensions is prohibited; they can wrap a blocked gh command." >&2
+# included) under a name no check here recognizes, so only read-only alias and
+# extension subcommands are allowed. Every occurrence is checked, and a failed
+# extraction counts as a match.
+GH_WRAP_RE='(^|[^A-Za-z0-9_-])gh([[:space:]]+-[^[:space:]]+)*[[:space:]]+(alias|extension|extensions|ext)([[:space:]]+[^[:space:]]+|[[:space:]]*$)'
+GH_WRAP_RC=0
+GH_WRAP_HITS=$(printf '%s' "$UNQUOTED" | grep -oE -- "$GH_WRAP_RE" 2>/dev/null) || GH_WRAP_RC=$?
+GH_WRAP_BAD=no
+if [ "$GH_WRAP_RC" -gt 1 ]; then
+  GH_WRAP_BAD=yes
+elif [ "$GH_WRAP_RC" = 0 ]; then
+  # One awk pass over every match: the last word of each is the subcommand.
+  GH_WRAP_BAD=$(printf '%s\n' "$GH_WRAP_HITS" | awk '
+    BEGIN { n = split("alias extension extensions ext list ls delete remove rm browse search", a, " "); for (k = 1; k <= n; k++) ok[a[k]] = 1 }
+    NF && !($NF in ok) { bad = 1 }
+    END { print (bad ? "yes" : "no") }' 2>/dev/null) || GH_WRAP_BAD=yes
+  case "$GH_WRAP_BAD" in yes | no) ;; *) GH_WRAP_BAD=yes ;; esac
+fi
+if [ "$GH_WRAP_BAD" = yes ]; then
+  echo "BLOCKED: only read-only gh alias and gh extension subcommands are allowed; an alias or extension can wrap a blocked gh command." >&2
   exit 2
 fi
 
@@ -535,7 +559,7 @@ SEG_FLAGS=$(printf '%s\n' "$FLAT" | tr ';&|' '\n\n\n' | awk '
   s ~ /^git merge[[:space:]]+(main|master)/ && s !~ /^git merge[[:space:]]+origin\// { gm = 1 }
   s ~ /^git push[[:space:]].*--force/ || s ~ /^git push[[:space:]]+-f/ { fp = 1 }
   s ~ /^git push[[:space:]]+.*origin[[:space:]]+(main|master|head:(main|master))/ { pm = 1 }
-  s ~ /^gh[[:space:]].*pr[[:space:]]+review([[:space:]]|$)/ && s ~ /[[:space:]](--approve([=[:space:]]|$)|-[a-z]*a[a-z]*([[:space:]]|$))/ { ap = 1 }
+  s ~ /^gh[[:space:]].*pr[[:space:]]+review([[:space:]]|$)/ && s ~ /[[:space:]](--approve([=[:space:]]|$)|-[acr]*a)/ { ap = 1 }
   END { printf "%d %d %d %d\n", gm, fp, pm, ap }' 2>/dev/null) || SEG_FLAGS=""
 case "$SEG_FLAGS" in
   [01]\ [01]\ [01]\ [01]) ;;
@@ -561,19 +585,24 @@ if [ "$SEG_PUSH_MAIN" = 1 ]; then
   exit 2
 fi
 
-# PR approvals: gh pr review with --approve or -a in any segment, and the same
-# on the quote-free, line-joined text so quoting, wrappers (env, command,
-# bash -c) and line continuations cannot hide one; also approvals through the
-# REST reviews endpoint or the GraphQL review mutations.
-APPROVE_CLI_RE='pr[[:space:]]+review([[:space:]].*)?[[:space:]](--approve([=[:space:]]|$)|-[a-z]*a[a-z]*([[:space:]]|$))'
-APPROVE_API_RE='(pulls/[^[:space:]]*/reviews|addPullRequestReview|submitPullRequestReview)'
+# PR approvals. gh pr review with --approve, or -a in a short-option cluster
+# (-a, -ca, -abLGTM: the letters before a value-taking -b, -F or -R are flags),
+# per segment and on the quote-free, line-joined text, so quoting, wrappers
+# (env, command, bash -c) and line continuations cannot hide one. Through the
+# API, any write to a REST reviews endpoint and any GraphQL review mutation is
+# blocked, since the review event may come from a file; reads stay allowed.
+APPROVE_CLI_RE='pr[[:space:]]+review([[:space:]].*)?[[:space:]](--approve([=[:space:]]|$)|-[acr]*a)'
+REVIEW_REST_RE='pulls/[^[:space:]]*/reviews'
+REVIEW_GQL_RE='(addPullRequestReview|submitPullRequestReview)'
+REVIEW_WRITE_RE='(^|[[:space:]])((-X|--method|--request)([[:space:]]*|=)(POST|PUT|PATCH)|--(field|raw-field|input|data[a-z-]*|json|form[a-z-]*|upload-file|post-data|post-file|body-data|body-file)([=[:space:]]|$)|-[A-Za-z]*[fFdT]|(http|https|xh|wget)[[:space:]])'
 if [ "$(grep_status -E "$APPROVE_CLI_RE" "$UNQUOTED")" != 1 ] || \
-   { [ "$(grep_status -iE "$APPROVE_API_RE" "$UNQUOTED")" != 1 ] && \
-     [ "$(grep_status -iE "approve" "$UNQUOTED")" != 1 ]; }; then
+   [ "$(grep_status -E "$REVIEW_GQL_RE" "$UNQUOTED")" != 1 ] || \
+   { [ "$(grep_status -iE "$REVIEW_REST_RE" "$UNQUOTED")" != 1 ] && \
+     [ "$(grep_status -iE "$REVIEW_WRITE_RE" "$UNQUOTED")" != 1 ]; }; then
   SEG_APPROVE=1
 fi
 if [ "$SEG_APPROVE" = 1 ]; then
-  echo "BLOCKED: PR auto-approve is prohibited." >&2
+  echo "BLOCKED: PR approvals, and writes to the PR review API, are prohibited." >&2
   exit 2
 fi
 
