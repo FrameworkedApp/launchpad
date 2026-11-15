@@ -2,11 +2,11 @@
 
 AI coding tools are powerful. Without structure, they're a trap.
 
-You prompt an agent to build a feature. It generates code that looks right — until you discover it hallucinated an API, ignored your existing patterns, or duplicated a utility that already exists. You fix it, start a new session, and the agent has forgotten everything. No specs. No guardrails. No memory. Just vibes.
+You prompt an agent to build a feature. It generates code that looks right, until you discover it hallucinated an API, ignored your existing patterns, or duplicated a utility that already exists. You fix it, start a new session, and the agent has forgotten everything. No specs. No guardrails. No memory. Just vibes.
 
 The best practices exist. Spec-driven development. Compound loops with fresh context. Structure enforcement. Automated quality gates. Context engineering via CLAUDE.md. They're scattered across blog posts, repos, and conference talks. You know you should set them up. You haven't had time.
 
-LaunchPad is an AI coding harness where all of it is already wired in and working. Install the plugin into any repository, run `/lp-kickoff`, and start building with an AI workflow that has specs, guardrails, autonomous execution loops, pre-commit hooks, CI pipelines, and automated code review — from the first commit.
+LaunchPad is an AI coding harness where all of it is already wired in and working. Install the plugin into any repository, run `/lp-kickoff`, and start building with an AI workflow that has specs, guardrails, autonomous execution loops, pre-commit hooks, CI pipelines, and automated code review, from the first commit.
 
 For the day-to-day workflow guide, see [How It Works](HOW_IT_WORKS.md).
 
@@ -25,7 +25,7 @@ For the day-to-day workflow guide, see [How It Works](HOW_IT_WORKS.md).
 
 ## The six-layer model
 
-LaunchPad organizes AI-assisted development into six layers. Each layer addresses a specific failure mode of unstructured AI coding. They build on each other sequentially — scaffold provides runtime infrastructure, definition produces specs, planning converts specs into hardened plans, execution builds and ships, quality catches mistakes through multi-agent review and confidence scoring, and learning feeds improvements back into every layer.
+LaunchPad organizes AI-assisted development into six layers. Each layer addresses a specific failure mode of unstructured AI coding. They build on each other sequentially: scaffold provides runtime infrastructure, definition produces specs, planning converts specs into hardened plans, execution builds and ships, quality catches mistakes through multi-agent review and confidence scoring, and learning feeds improvements back into every layer.
 
 ```mermaid
 sequenceDiagram
@@ -52,7 +52,7 @@ sequenceDiagram
     Note over L6: compound learning loop
 ```
 
-The first four layers form a forward pipeline. Layer 5 (Quality) creates a tight feedback loop with Layer 4 (Execution) — review findings are resolved and re-validated before shipping. Layer 6 (Learning) wraps everything, extracting knowledge from resolved problems and feeding it back into future cycles.
+The first four layers form a forward pipeline. Layer 5 (Quality) creates a tight feedback loop with Layer 4 (Execution): review findings are resolved and re-validated before shipping. Layer 6 (Learning) wraps everything, extracting knowledge from resolved problems and feeding it back into future cycles.
 
 | Layer             | What it does                                                                                  | Key artifacts                                                                            |
 | ----------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -65,13 +65,13 @@ The first four layers form a forward pipeline. Layer 5 (Quality) creates a tight
 
 For the command-level detail of each layer, see [How It Works → The four meta-orchestrators](HOW_IT_WORKS.md#the-four-meta-orchestrators).
 
-**Kernel posture extends to consumers (v2.1.2+)**: prior to v2.1.2, the lefthook gates that protect Layer 1 ran only against LaunchPad's own commits — an inward-facing posture. At v2.1.2 the same gate philosophy propagates outward: stack adapters can contribute pre-commit/pre-push gates that scaffold into consumer repositories, so a `/lp-define`-generated project inherits the harness's "fail loud, fix at commit time" stance instead of waiting for CI to catch what the kernel could have caught locally. See [CI_CD.md → Consumer Python gates](../architecture/CI_CD.md#consumer-python-gates) for the gate inventory and per-stack opt-out paths.
+**Kernel posture extends to consumers (v2.1.2+)**: prior to v2.1.2, the lefthook gates that protect Layer 1 ran only against LaunchPad's own commits, an inward-facing posture. At v2.1.2 the same gate philosophy propagates outward: stack adapters can contribute pre-commit/pre-push gates that scaffold into consumer repositories, so a `/lp-define`-generated project inherits the harness's "fail loud, fix at commit time" stance instead of waiting for CI to catch what the kernel could have caught locally. See [CI_CD.md → Consumer Python gates](../architecture/CI_CD.md#consumer-python-gates) for the gate inventory and per-stack opt-out paths.
 
 ---
 
 ## The four meta-orchestrators
 
-Four meta-orchestrators chain the layers into end-to-end workflows. Each owns a phase of the lifecycle and checks status before proceeding — so you can invoke any one independently when resuming work.
+Four meta-orchestrators chain the layers into end-to-end workflows. Each owns a phase of the lifecycle and checks status before proceeding, so you can invoke any one independently when resuming work.
 
 | Meta-orchestrator | Layers | What it chains                                                                                         |
 | ----------------- | ------ | ------------------------------------------------------------------------------------------------------ |
@@ -80,7 +80,7 @@ Four meta-orchestrators chain the layers into end-to-end workflows. Each owns a 
 | `/lp-plan`        | 3      | design → `/lp-pnf` → `/lp-harden-plan` → human approval                                                |
 | `/lp-build`       | 4–6    | `/lp-inf` → `/lp-review` → `/lp-resolve-todo-parallel` → `/lp-test-browser` → `/lp-ship` → `/lp-learn` |
 
-Each orchestrator works against a **status contract** — every section progresses through a strict chain:
+Each orchestrator works against a **status contract**: every section progresses through a strict chain:
 
 ```
 defined → shaped → designed / "design:skipped" → planned → hardened → approved → reviewed → built
@@ -88,11 +88,13 @@ defined → shaped → designed / "design:skipped" → planned → hardened → 
 
 The orchestrator reads status from the section spec's YAML frontmatter, routes to the appropriate step, and refuses to run if the section is not at the expected stage.
 
+For a change too large for one session, `/lp-conductor` runs the planning and the build in separate sessions and checks each step from a third. See [principle 8](#8-separate-the-planner-the-builder-and-the-checker).
+
 ---
 
 ## Design principles
 
-Seven principles guided the design. Together they form a system where AI agents can work autonomously at high tempo, but cannot silently produce low-quality or unsafe output.
+Eight principles guided the design. Together they form a system where AI agents can work autonomously at high tempo, but cannot silently produce low-quality or unsafe output.
 
 ### 1. Status contract over free-form state
 
@@ -100,11 +102,11 @@ Every section has a tracked status, and every meta-orchestrator validates that s
 
 ### 2. Fresh-context execution loops
 
-Each loop iteration (`loop.sh` inside `/lp-inf`) runs in a **fresh AI context**. Memory persists via git commits and state files (`prd.json`, `progress.txt`), not conversation history. This prevents context drift across long sessions — a 25-iteration run doesn't degrade into confusion because every iteration starts clean.
+Each loop iteration (`loop.sh` inside `/lp-inf`) runs in a **fresh AI context**. Memory persists via git commits and state files (`prd.json`, `progress.txt`), not conversation history. This prevents context drift across long sessions: a 25-iteration run doesn't degrade into confusion because every iteration starts clean.
 
 ### 3. Confidence scoring, not false-positive avalanches
 
-`/lp-review` dispatches 7+ review agents in parallel. Raw output would bury real issues under generic advice. Instead, every finding is scored (0.00–1.00) with boosters for multi-agent agreement and security concerns, and suppressed below a 0.60 threshold — with audit trail. A P1 floor ensures critical findings are never auto-suppressed.
+`/lp-review` dispatches 7+ review agents in parallel. Raw output would bury real issues under generic advice. Instead, every finding is scored (0.00–1.00) with boosters for multi-agent agreement and security concerns, and suppressed below a 0.60 threshold, with an audit trail. A P1 floor ensures critical findings are never auto-suppressed.
 
 ### 4. Multi-layer merge prevention
 
@@ -118,7 +120,7 @@ Autonomous execution is further gated by `.launchpad/autonomous-ack.md` (D8, mus
 
 ### 5. Compound learning
 
-Each unit of work should make future work easier — not harder. `/lp-learn` spawns 5 parallel sub-agents after every cycle, extracting structured learnings into `docs/solutions/`. These flow through a three-tier knowledge system:
+Each unit of work should make future work easier, not harder. `/lp-learn` spawns 5 parallel sub-agents after every cycle, extracting structured learnings into `docs/solutions/`. These flow through a three-tier knowledge system:
 
 ```mermaid
 flowchart LR
@@ -146,10 +148,10 @@ flowchart LR
 
 A 30-minute fix becomes a seconds-long pattern match on next occurrence, and eventually a pre-loaded rule that prevents the problem entirely:
 
-1. **First occurrence** — problem takes 30 minutes to research and solve.
-2. **Document** — `/lp-learn` extracts structured learnings (automatic).
-3. **Next occurrence** — AI reads `docs/solutions/` during planning and recognizes the pattern (seconds).
-4. **Promotion** — valuable patterns graduate into `CLAUDE.md`; all future sessions start with the pattern pre-loaded.
+1. **First occurrence**: problem takes 30 minutes to research and solve.
+2. **Document**: `/lp-learn` extracts structured learnings (automatic).
+3. **Next occurrence**: AI reads `docs/solutions/` during planning and recognizes the pattern (seconds).
+4. **Promotion**: valuable patterns graduate into `CLAUDE.md`; all future sessions start with the pattern pre-loaded.
 
 ### 6. Provider-profile inheritance for external-infrastructure preflight
 
@@ -169,79 +171,87 @@ The safety bar for a second host is parity plus disclosure, not proof. On Claude
 
 For the install commands, the verified list, and each difference, see [How It Works → Codex](HOW_IT_WORKS.md#codex).
 
+### 8. Separate the planner, the builder and the checker
+
+A session that wrote a plan reviews it generously, and a session that wrote the code cannot review it independently. A large change also outgrows one session's context. `/lp-conductor` (v2.3.0) answers all three by giving each role its own session: an Author writes and hardens the plan, an Implementer builds it in sections, and a Conductor checks both and never writes the plan, the spec or the code, so it stays independent.
+
+The Conductor verifies instead of trusting reports. At every checkpoint it reruns the project's gates in the Implementer's checkout over everything since the last verified head, and a failed checkpoint gets a retry rather than a pass. The sessions talk through files in role inboxes, not chat, so the state survives a compaction and `/lp-conductor resume` can pick it up. Reports are data, never consent: the Conductor rules on mechanical questions only, brings every other decision to you, and every push, PR and merge needs your own go-ahead.
+
+For the day-to-day steps, see [How It Works → `/lp-conductor`](HOW_IT_WORKS.md#lp-conductor).
+
 ---
 
 ## The agent fleet
 
 LaunchPad ships 39 agents across six namespaces. The fleet is read from `.launchpad/agents.yml` at command time, so downstream projects can tune the roster (add custom reviewers, drop agents they don't need) without forking the plugin.
 
-### research/ (8 agents)
+### research/ (7 agents)
 
 Read-only documentarians. Dispatched during definition, planning, and hardening to gather codebase and documentation context.
 
-| Agent                  | Purpose                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `file-locator`         | Find source files (Grep/Glob/LS only)                                                 |
-| `code-analyzer`        | Deep analysis with file:line precision (Read)                                         |
-| `pattern-finder`       | Find existing patterns to model after                                                 |
-| `docs-locator`         | Find docs by frontmatter, date-prefixed filenames, directory structure                |
-| `docs-analyzer`        | Extract decisions, rejected approaches, constraints from docs                         |
-| `web-researcher`       | External documentation, API references                                                |
-| `learnings-researcher` | Search `docs/solutions/` by frontmatter metadata                                      |
-| `skill-evaluator`      | 3-pass quality evaluation (first-principles, baseline detection, Anthropic checklist) |
+| Agent                     | Purpose                                                                |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `lp-file-locator`         | Find source files (Grep/Glob/LS only)                                  |
+| `lp-code-analyzer`        | Deep analysis with file:line precision (Read)                          |
+| `lp-pattern-finder`       | Find existing patterns to model after                                  |
+| `lp-docs-locator`         | Find docs by frontmatter, date-prefixed filenames, directory structure |
+| `lp-docs-analyzer`        | Extract decisions, rejected approaches, constraints from docs          |
+| `lp-web-researcher`       | External documentation, API references                                 |
+| `lp-learnings-researcher` | Search `docs/solutions/` by frontmatter metadata                       |
 
 ### review/ (16 agents)
 
-Dispatched by `/lp-review` in parallel with confidence scoring.
+Dispatched by `/lp-review` in parallel with confidence scoring. The default roster also dispatches `lp-pattern-finder` from research/.
 
-| Agent                                                                                                                                                                   | Dispatch condition                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `pattern-finder` / `security-auditor` / `kieran-foad-ts-reviewer` / `performance-auditor` / `code-simplicity-reviewer` / `architecture-strategist` / `testing-reviewer` | Always                                                   |
-| `schema-drift-detector`                                                                                                                                                 | Database schema or migration changes (runs first)        |
-| `data-migration-auditor` / `data-integrity-auditor`                                                                                                                     | Database schema or migration changes (with drift report) |
-| `spec-flow-analyzer` / `frontend-races-reviewer`                                                                                                                        | Plan hardening                                           |
-| `deployment-verification-agent`                                                                                                                                         | Opt-in                                                   |
-| `lp-claims-auditor`                                                                                                                                                     | Default, all stacks                                      |
-| `lp-foad-go-reviewer`                                                                                                                                                   | Default roster, Go stacks only                           |
-| `lp-document-truth`                                                                                                                                                     | Opt-in via document roster                               |
+| Agent                                                                                                                                                         | Dispatch condition                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `lp-security-auditor` / `lp-performance-auditor` / `lp-code-simplicity-reviewer` / `lp-architecture-strategist` / `lp-testing-reviewer` / `lp-claims-auditor` | Default roster, all stacks                                                                                |
+| `lp-kieran-foad-ts-reviewer`                                                                                                                                  | Default roster for TypeScript monorepo projects                                                           |
+| `lp-kieran-foad-python-reviewer`                                                                                                                              | Default roster for Django and other Python projects                                                       |
+| `lp-foad-go-reviewer`                                                                                                                                         | Default roster, Go stacks only                                                                            |
+| `lp-schema-drift-detector`                                                                                                                                    | Database changes detected for Prisma, Drizzle, Supabase, Rails, Alembic, Django or plain SQL (runs first) |
+| `lp-data-migration-auditor` / `lp-data-integrity-auditor`                                                                                                     | Database changes detected (with drift report)                                                             |
+| `lp-spec-flow-analyzer` / `lp-frontend-races-reviewer`                                                                                                        | Plan hardening                                                                                            |
+| `lp-deployment-verification-agent`                                                                                                                            | Opt-in                                                                                                    |
+| `lp-document-truth`                                                                                                                                           | Opt-in via document roster                                                                                |
 
 ### document-review/ (7 agents)
 
 Dispatched by `/lp-harden-plan` Step 3.5 to stress-test plans at the document level.
 
-- `adversarial-document-reviewer` — red-team attack on plan assumptions
-- `coherence-reviewer` — internal consistency, logical flow
-- `feasibility-reviewer` — technical feasibility, resource estimation
-- `scope-guardian-reviewer` — scope creep detection
-- `product-lens-reviewer` — product strategy alignment
-- `security-lens-reviewer` — security implications in plan design
-- `design-lens-reviewer` — UI/design alignment (conditional: UI sections only)
+- `lp-adversarial-document-reviewer`: red-team attack on plan assumptions
+- `lp-coherence-reviewer`: internal consistency, logical flow
+- `lp-feasibility-reviewer`: technical feasibility, resource estimation
+- `lp-scope-guardian-reviewer`: scope creep detection
+- `lp-product-lens-reviewer`: product strategy alignment
+- `lp-security-lens-reviewer`: security implications in plan design
+- `lp-design-lens-reviewer`: UI/design alignment (conditional: UI sections only)
 
 ### resolve/ (2 agents)
 
-- `harness-todo-resolver` — fix individual review findings from `.harness/todos/`
-- `pr-comment-resolver` — batch-resolve unresolved PR review comments
+- `lp-harness-todo-resolver`: fix individual review findings from `.harness/todos/`
+- `lp-pr-comment-resolver`: batch-resolve unresolved PR review comments
 
 ### design/ (6 agents)
 
-- `design-ui-auditor` — 5 quick checks with P1/P2/P3 severity
-- `design-responsive-auditor` — 6 responsive checks
-- `design-alignment-checker` — 14-dimension audit against `DESIGN_SYSTEM.md`
-- `design-implementation-reviewer` — Figma comparison (report-only, conditional on Figma URL)
-- `design-iterator` — iterative screenshot-analyze-improve (ONE change per cycle)
-- `figma-design-sync` — sync implementation with Figma designs via Figma MCP
+- `lp-design-ui-auditor`: 5 quick checks with P1/P2/P3 severity
+- `lp-design-responsive-auditor`: 6 responsive checks
+- `lp-design-alignment-checker`: 14-dimension audit against `DESIGN_SYSTEM.md`
+- `lp-design-implementation-reviewer`: Figma comparison (report-only, conditional on Figma URL)
+- `lp-design-iterator`: iterative screenshot-analyze-improve (ONE change per cycle)
+- `lp-figma-design-sync`: sync implementation with Figma designs via Figma MCP
 
 ### skills/ (1 agent)
 
-- `skill-evaluator` — 3-pass quality evaluation for `/lp-create-skill` and `/lp-update-skill`
+- `lp-skill-evaluator`: 3-pass quality evaluation for `/lp-create-skill` and `/lp-update-skill`
 
 ---
 
 ## Skill creation infrastructure
 
-LaunchPad ships the infrastructure to create, port, and update domain-specific AI skills — not pre-built skills for specific domains. Every downstream project can create its own skills from day one.
+LaunchPad ships the infrastructure to create, port, and update domain-specific AI skills, not pre-built skills for specific domains. Every downstream project can create its own skills from day one.
 
-### `/lp-create-skill` — Meta-Skill Forge
+### `/lp-create-skill`: Meta-Skill Forge
 
 A 7-phase methodology:
 
@@ -255,11 +265,11 @@ A 7-phase methodology:
 | 6. Quality Validation    | Recursive evaluation loop (max 3 cycles, 16 criteria) |
 | 7. Ship It               | Generate evals, register in `CLAUDE.md`               |
 
-### `/lp-port-skill` — External skill import
+### `/lp-port-skill`: External skill import
 
 4-phase workflow: Ingest → Adapt → Validate → Register. Fully detaches from source after import.
 
-### `/lp-update-skill` — Iterative improvement
+### `/lp-update-skill`: Iterative improvement
 
 Reads existing skill files, performs delta analysis, re-runs relevant Forge phases.
 
@@ -271,21 +281,21 @@ LaunchPad stands on the shoulders of several excellent projects and frameworks. 
 
 ### Compound Engineering Plugin
 
-**By:** Kieran Klaassen / Every — [EveryInc/compound-engineering-plugin](https://github.com/EveryInc/compound-engineering-plugin)
+**By:** Kieran Klaassen / Every ([EveryInc/compound-engineering-plugin](https://github.com/EveryInc/compound-engineering-plugin))
 
-The compounding philosophy and structured learning capture system. All 29 agents, 22 commands, and 19 skills from the CE plugin have been ported natively into LaunchPad. The `docs/solutions/` pattern, the learnings extraction pipeline, and the WRONG/CORRECT anti-pattern format are CE's. The plugin is no longer required as a separate installation — its capabilities are built in.
+The compounding philosophy and structured learning capture system. All 29 agents, 22 commands, and 19 skills from the CE plugin have been ported natively into LaunchPad. The `docs/solutions/` pattern, the learnings extraction pipeline, and the WRONG/CORRECT anti-pattern format are CE's. The plugin is no longer required as a separate installation; its capabilities are built in.
 
 ### Compound Product
 
-**By:** Ryan Carson — [snarktank/compound-product](https://github.com/snarktank/compound-product)
+**By:** Ryan Carson ([snarktank/compound-product](https://github.com/snarktank/compound-product))
 
 The core pipeline: report → analysis → PRD → tasks → autonomous loop → PR. Adapted into `scripts/compound/` (rendered into every project via `/lp-bootstrap`; delivery mechanism changes from template-clone to plugin-bundled in v2.1 per BL-247) with significant modifications.
 
 ### Ralph
 
-**By:** Ryan Carson — [snarktank/ralph](https://github.com/snarktank/ralph) — and **Geoffrey Huntley** — [ghuntley.com/ralph](https://ghuntley.com/ralph/)
+**By:** Ryan Carson ([snarktank/ralph](https://github.com/snarktank/ralph)) and **Geoffrey Huntley** ([ghuntley.com/ralph](https://ghuntley.com/ralph/))
 
-The autonomous execution loop concept — fresh context per iteration, git as memory. LaunchPad's `loop.sh` and the entire fresh-context principle come from this lineage.
+The autonomous execution loop concept: fresh context per iteration, git as memory. LaunchPad's `loop.sh` and the entire fresh-context principle come from this lineage.
 
 ### HumanLayer
 
@@ -304,6 +314,6 @@ The philosophy of "specify before building." LaunchPad's implementation produces
 ## Related
 
 - [README](../../README.md)
-- [How It Works](HOW_IT_WORKS.md) — day-to-day operator's manual
-- [Repository Structure](../architecture/REPOSITORY_STRUCTURE.md) — file-placement decision tree
+- [How It Works](HOW_IT_WORKS.md): day-to-day operator's manual
+- [Repository Structure](../architecture/REPOSITORY_STRUCTURE.md): file-placement decision tree
 - [Release notes](../releases/v1.0.0.md)

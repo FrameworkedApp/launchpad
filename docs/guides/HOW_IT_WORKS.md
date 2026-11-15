@@ -38,7 +38,7 @@ Commands appear in their Claude Code form, `/lp-<name>`. On Codex the same comma
 
 ## Installing the plugin
 
-### Path 1 — Add to any repo (Brownfield)
+### Path 1: Add to any repo (Brownfield)
 
 Inside Claude Code, in the project where you want the commands, register the BuiltForm marketplace and install the plugin. Copy-paste the two commands below into a fresh Claude Code session:
 
@@ -51,7 +51,7 @@ Restart Claude Code. All `/lp-*` commands are now available. Run `/lp-kickoff` t
 
 The `marketplace add` step is required today because BuiltForm is awaiting confirmation in the Anthropic public plugin registry. Once Anthropic confirms BuiltForm, `/plugin install launchpad@builtform` will work on its own and the `marketplace add` line will no longer be necessary. Until then, run both lines.
 
-### Path 2 — Fresh monorepo (Greenfield)
+### Path 2: Fresh monorepo (Greenfield)
 
 LaunchPad detects greenfield vs brownfield by **inspecting your project folder**. An empty folder reads as greenfield, and so does one containing only `.gitignore`, a short `README.md`, `LICENSE`, a fresh `git init`, the `.DS_Store` file Finder adds when you open the folder, LaunchPad's own `.launchpad/` and `.harness/` folders, or the `docs/brainstorms/` folder that `/lp-kickoff` and `/lp-brainstorm` create. Anything else (a `package.json`, `pyproject.toml`, any other dependency manifest, or other files you added) flips detection and the four-command pipeline will refuse to scaffold.
 
@@ -63,7 +63,7 @@ The single source of truth for this rule is the `cwd_state()` heuristic at `plug
 mkdir my-project && cd my-project
 ```
 
-Don't `npm init`, don't drop in a `pyproject.toml`, don't open the folder in Finder before you're ready — keep it clean.
+Don't `npm init`, don't drop in a `pyproject.toml`, don't open the folder in Finder before you're ready; keep it clean.
 
 **Step 2.** Open Claude Code in that folder and install the plugin using the same two commands from Path 1.
 
@@ -96,6 +96,8 @@ v2.x greenfield projects scaffolded via `/lp-brainstorm` → `/lp-pick-stack` �
 ```
 
 Restart Claude Code after updating. The install cache (`~/.claude/plugins/cache/builtform/launchpad/<version>/`) is a snapshot taken at install time, so uninstall + marketplace-update + reinstall is the supported refresh flow.
+
+The BuiltForm marketplace installs LaunchPad from its `stable` branch. The release workflow moves `stable` forward only after a release tag passes verification, so an update brings you the latest verified release on both Claude Code and Codex.
 
 ---
 
@@ -203,7 +205,7 @@ sequenceDiagram
     PickStack-->>User: suggests /lp-scaffold-stack
 
     User->>ScaffoldStack: invoke
-    ScaffoldStack->>ScaffoldStack: validate_decision() — 12 active rules (rule 12 deferred to v2.2 per BL-235)
+    ScaffoldStack->>ScaffoldStack: validate_decision(): 12 active rules (rule 12 deferred to v2.2 per BL-235)
     ScaffoldStack->>ScaffoldStack: nonce ledger lookup (refuse on already-seen)
     ScaffoldStack->>ScaffoldStack: layer materialization (path:"." uses temp-dir-merge)
     Note over ScaffoldStack: materialized
@@ -229,7 +231,7 @@ The diagram captures the happy path. Failure paths are not drawn (they would clu
 1. **`/lp-brainstorm`**: runs in any cwd. Computes `cwd_state(cwd)` (one of `empty`, `brownfield`, `ambiguous` per the greenfield-detection heuristic in [SCAFFOLD_HANDSHAKE.md §8](../architecture/SCAFFOLD_HANDSHAKE.md#8-greenfield-detection-heuristic)). Captures user intent through a structured dialogue and writes the brainstorm document to `docs/brainstorms/`. On greenfield, also writes `.launchpad/brainstorm-summary.md`: its frontmatter carries `generated_at`, `generated_by`, `greenfield`, `cwd_state_when_generated` and the optional `brainstorm_doc` path, and its body includes the stack-relevant constraints the brainstorm settled (data store, runtime shape, sign-in, hosting, team language). Then suggests `/lp-pick-stack`. On brownfield, suggests `/lp-define` instead.
 2. **`/lp-pick-stack`**: refuses on brownfield or ambiguous folders and validates the brainstorm-summary frontmatter (refuses on shape mismatch or `greenfield: false`). It then reads the brainstorm as data and runs a 5-question funnel in which it proposes each answer from the brainstorm and you confirm or change it. A category matcher returns every catalog category your answers qualify for; undecided answers such as "decide for me" widen that shortlist instead of ruling categories out. Claude weighs the shortlist against the brainstorm's constraints, recommends one category, says why each other one falls short, and you pick. The matcher itself never reads the brainstorm, and only a category from its shortlist (or a manual override) can be sealed. The user's free-text gets sanitized through a `rationale_summary` extractor (closed-bullet allowlist, RTL/zero-width refusal) before going anywhere user-visible. Output: a sealed `scaffold-decision.json` (sha256 envelope + nonce + `bound_cwd` triple) and a human-readable `rationale.md`.
 3. **`/lp-scaffold-stack`**: validates the decision against 12 active rules (rule 12, `brainstorm_session_id` cross-binding, deferred to v2.2 per BL-235). Looks up the decision's nonce in `.launchpad/.scaffold-nonces.log`, refuses on already-seen. For each layer in the decision, runs the configured scaffolder (orchestrate-mode CLIs like `npm create astro@latest`, or the `curate` adapter for stacks like Django that bring their own structure). For `path: "."` orchestrate scaffolders, the materializer runs the CLI in a same-filesystem temp dir and merges via `shutil.move`, keeping `.launchpad/` artifacts intact while satisfying CLIs that demand an empty target. On success: writes a sealed `scaffold-receipt.json` (links back to the decision via `decision_sha256`) and appends the nonce to the ledger.
-4. **`/lp-define`**: reads `scaffold-receipt.json`, cross-checks `decision_sha256` against the on-disk decision, dispatches one per-layer adapter (`plugin_stack_adapters/<stack>_adapter.py`), and renders the architecture docs into `docs/architecture/`. Seeds `.launchpad/agents.yml` and `.launchpad/config.yml` if absent. Per-stack lefthook fragments (v2.1.2+) can contribute pre-commit/pre-push gates to the consumer's rendered `lefthook.yml` — see [CI_CD.md → Consumer Python gates](../architecture/CI_CD.md#consumer-python-gates). Then renders the **Tier 1 reveal panel**, described below.
+4. **`/lp-define`**: reads `scaffold-receipt.json`, cross-checks `decision_sha256` against the on-disk decision, dispatches one per-layer adapter (`plugin_stack_adapters/<stack>_adapter.py`), and renders the architecture docs into `docs/architecture/`. Seeds `.launchpad/agents.yml` and `.launchpad/config.yml` if absent. Per-stack lefthook fragments (v2.1.2+) can contribute pre-commit/pre-push gates to the consumer's rendered `lefthook.yml`; see [CI_CD.md → Consumer Python gates](../architecture/CI_CD.md#consumer-python-gates). Then renders the **Tier 1 reveal panel**, described below.
 
 ### Failure paths
 
@@ -263,7 +265,7 @@ Three variants render depending on context:
   • .harness/ captures run logs, observations, todos for compound
     learning
     → past mistakes inform future review agents automatically
-  • docs/architecture/ — 8 living architecture docs, kept current
+  • docs/architecture/: 8 living architecture docs, kept current
     by /lp-define re-runs
     → architecture stays in sync with code; no doc rot
 
@@ -323,6 +325,8 @@ defined → shaped → designed / "design:skipped" → planned → hardened → 
 ```
 
 Each meta-orchestrator checks this status before proceeding and refuses to run if the section is not at the expected stage. Registry integrity is validated at every transition, the harness refuses to proceed if artifacts are missing for the current status (e.g., status is `approved` but `approved_at` field is absent).
+
+For a change too large for one session, [`/lp-conductor`](#lp-conductor) splits the planning and building work across separate sessions: an Author writes and hardens the plan with `/lp-harden-plan`, an Implementer builds it in sections and reviews with `/lp-review`, and the Conductor session checks each step.
 
 ---
 
@@ -428,7 +432,7 @@ Presents plan summary with hardening notes and design status. Four options:
 
 ### Step 0: Preflight
 
-- **Autonomous-mode acknowledgment**: `.launchpad/autonomous-ack.md` must exist as a tracked file. It's a social/review signal, not a cryptographic gate, but having the file tracked in git blame makes autonomous-execution authorization visible. Enforced via `assert_autonomous_ack(repo_root)` from `plugin_stack_adapters/autonomous_guard.py` — the same helper is called by `/lp-inf`, `/lp-resolve-todo-parallel`, and `/lp-ship` so direct invocation cannot bypass the gate (BL-356, v2.1.6). Refuse-message embeds a copy-pasteable starter template beginning with `# Autonomous Execution Acknowledgment` so first-time users can author the file without leaving the terminal.
+- **Autonomous-mode acknowledgment**: `.launchpad/autonomous-ack.md` must exist as a tracked file. It's a social/review signal, not a cryptographic gate, but having the file tracked in git blame makes autonomous-execution authorization visible. Enforced via `assert_autonomous_ack(repo_root)` from `plugin_stack_adapters/autonomous_guard.py`; the same helper is called by `/lp-inf`, `/lp-resolve-todo-parallel`, and `/lp-ship` so direct invocation cannot bypass the gate (BL-356, v2.1.6). Refuse-message embeds a copy-pasteable starter template beginning with `# Autonomous Execution Acknowledgment` so first-time users can author the file without leaving the terminal.
 - **Commands-hash check**: `LP_CONFIG_REVIEWED` env var must match either the full 64-char sha256 of the canonical `commands:` block or its 16-char prefix. The audit log records the 16-char prefix for readability; both forms validate.
 - **Integrity guard**: refuses to run if the section spec and `autonomous-ack.md` were introduced in the same commit (the exact pattern a hostile PR would use to bypass review).
 - **Audit entry**: appends one line to `.launchpad/audit.log` with ISO timestamp, git user, commit SHA, content-hash of commands, and the invoking command name.
@@ -459,18 +463,24 @@ Use `/lp-conductor` for a change large enough to plan and build in separate sess
 
 Run `/lp-define` first, then `/lp-conductor` and answer its questions. Paste the printed prompt into a new session and keep the Conductor open. If a plan is already approved or a build is already under way, say so when it asks where the work stands; it then prints the Implementer prompt, or a short prompt for the session already building, instead. It prints the Implementer prompt when the plan is ready. After the Conductor compacts, run `/lp-conductor resume` to restore its state and check for unanswered reports.
 
+The Implementer stops after every section. The Conductor reruns the project's gates in the Implementer's checkout before it lets the next section start, and pauses for you every five sections by default. Its working files (handoffs, protocols, role inboxes and a log) live in `.harness/conductor/`; `--root` picks another folder, which must be inside the repository and git-ignored.
+
 You make the decisions the Conductor brings you, and every push, PR and merge still needs your own go-ahead.
 
 ### `/lp-review`
 
 Multi-agent code review with confidence-based false-positive suppression.
 
-- Dispatches agents from `.launchpad/agents.yml` in parallel (code, DB, design, copy agents)
+- Dispatches agents from `.launchpad/agents.yml` in parallel (code, database, design, copy and document agents). Code agents whose `stack_scope` does not match the project's stacks are dropped; stack names saved by `/lp-scaffold-stack`, such as `hono` or `django`, are mapped to stack ids first
+- Detects database changes for Prisma, Drizzle, Supabase, Rails, Alembic, Django and plain SQL by reading project files as text, never by running project config. The database agents receive the detected tool, schema paths and migration folders. If detection fails, they review the raw diff and the summary records it
+- `lp-claims-auditor` checks factual claims in commit messages, the PR body, doc comments, test names and READMEs against the exact commit range under review
+- Document agents such as `lp-document-truth` run only when both `review_document_agents` and `review_document_artifacts` are set. A configured roster with no matching files is reported as a P1 configuration finding
 - Pre-dispatch secret scan on added lines using `.launchpad/secret-patterns.txt`
 - Confidence scoring (0.00–1.00) per finding. Threshold: **0.60**. Findings below threshold are suppressed with audit trail in `.harness/review-summary.md`
 - Boosters: multi-agent agreement (+0.10), security concerns (+0.10), P1 floor (minimum 0.60)
 - PR intent verification: findings contradicting stated PR intent are suppressed
 - Writes actionable findings to `.harness/todos/`, suppressed findings to review summary
+- Lists checks that could not run (a missing tool, no safe sandbox, a failed detector) under `## Coverage Limitations` in the review summary. They are never counted as a pass
 - **`--headless` mode:** identical pipeline but suppresses interactive output. Used by `/lp-harden-plan` and `/lp-commit`
 
 **Confidence tiers:**
@@ -527,23 +537,25 @@ Collaborative idea exploration. Loads brainstorming skill, dispatches research a
 
 ### Other commands
 
-| Command                   | Purpose                                                                                                                                                             |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/lp-update-identity`     | Update sealed identity (project rename, license, copyright holder, email, repo URL, PII opt-in) without re-scaffolding; see "Post-scaffold lifecycle" section above |
-| `/lp-defer`               | Manually add a task to the backlog via `.harness/observations/`                                                                                                     |
-| `/lp-regenerate-backlog`  | Regenerate `docs/tasks/BACKLOG.md` from deferred observations and section registry                                                                                  |
-| `/lp-design-review`       | 8-design + 4-tech dimension quality audit with AI slop detection                                                                                                    |
-| `/lp-design-polish`       | Pre-ship refinement pass for alignment, spacing, copy, interaction states                                                                                           |
-| `/lp-copy`                | Reads copy brief from section spec, provides copy context for design builds                                                                                         |
-| `/lp-copy-review`         | Dispatches copy review agents from `review_copy_agents`                                                                                                             |
-| `/lp-feature-video`       | Records design walkthrough: screenshots → MP4+GIF via ffmpeg → upload via rclone/imgup                                                                              |
-| `/lp-resolve-pr-comments` | Batch-resolves unresolved PR review comments with parallel agents                                                                                                   |
-| `/lp-update-spec`         | Scans all spec files for gaps, TBDs, cross-file inconsistencies                                                                                                     |
-| `/lp-hydrate`             | Session bootstrapping with minimal context                                                                                                                          |
-| `/lp-research-codebase`   | Two-wave research → `docs/reports/` (input for `/lp-inf`)                                                                                                           |
-| `/lp-create-agent`        | Create a new agent or convert an existing skill into an agent                                                                                                       |
-| `/lp-memory-report`       | Update session memory files and create a detailed session report                                                                                                    |
-| `/lp-design-onboard`      | Design onboarding flows, empty states, first-time user experiences (invoked from `/lp-plan` Step 2b when relevant)                                                  |
+| Command                   | Purpose                                                                                                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/lp-implement-plan`      | Build an approved plan from `docs/plans/` phase by phase in your own session, checking off each phase and stopping to ask when the code does not match the plan. The hands-on alternative to `/lp-build`                                  |
+| `/lp-bootstrap`           | Render the project's infrastructure files (hooks, workflows, ignore files, scripts). `/lp-define` runs it when files are missing or stale; after upgrading LaunchPad, run `/lp-bootstrap --accept-plugin-version-drift` to re-render them |
+| `/lp-update-identity`     | Update sealed identity (project rename, license, copyright holder, email, repo URL, PII opt-in) without re-scaffolding; see "Post-scaffold lifecycle" section above                                                                       |
+| `/lp-defer`               | Manually add a task to the backlog via `.harness/observations/`                                                                                                                                                                           |
+| `/lp-regenerate-backlog`  | Regenerate `docs/tasks/BACKLOG.md` from deferred observations and section registry                                                                                                                                                        |
+| `/lp-design-review`       | 8-design + 4-tech dimension quality audit with AI slop detection                                                                                                                                                                          |
+| `/lp-design-polish`       | Pre-ship refinement pass for alignment, spacing, copy, interaction states                                                                                                                                                                 |
+| `/lp-copy`                | Reads copy brief from section spec, provides copy context for design builds                                                                                                                                                               |
+| `/lp-copy-review`         | Dispatches copy review agents from `review_copy_agents`                                                                                                                                                                                   |
+| `/lp-feature-video`       | Records design walkthrough: screenshots → MP4+GIF via ffmpeg → upload via rclone/imgup                                                                                                                                                    |
+| `/lp-resolve-pr-comments` | Batch-resolves unresolved PR review comments with parallel agents                                                                                                                                                                         |
+| `/lp-update-spec`         | Scans all spec files for gaps, TBDs, cross-file inconsistencies                                                                                                                                                                           |
+| `/lp-hydrate`             | Session bootstrapping with minimal context                                                                                                                                                                                                |
+| `/lp-research-codebase`   | Two-wave research → `docs/reports/` (input for `/lp-inf`)                                                                                                                                                                                 |
+| `/lp-create-agent`        | Create a new agent or convert an existing skill into an agent                                                                                                                                                                             |
+| `/lp-memory-report`       | Update session memory files and create a detailed session report                                                                                                                                                                          |
+| `/lp-design-onboard`      | Design onboarding flows, empty states, first-time user experiences (invoked from `/lp-plan` Step 2b when relevant)                                                                                                                        |
 
 ---
 
@@ -749,7 +761,7 @@ Other CI-relevant env vars live in the [Environment variables](#environment-vari
 6. **Structure validation**, `check-repo-structure.sh` enforces file placement.
 7. **Secrets via `.env.local`**: all API keys load from gitignored `.env.local`. No secrets inline in commands.
 8. **Pre-dispatch secret scan**: `/lp-review` scans added lines against `.launchpad/secret-patterns.txt` (one regex per line, `sk-`, `ghp_`, `AKIA`, `-----BEGIN .* PRIVATE KEY-----`, etc.) before any review agents are dispatched. Findings block review.
-9. **Autonomous-execution acknowledgment**: `.launchpad/autonomous-ack.md` must exist as a tracked file; absence blocks `/lp-build` AND its three wrapped autonomous-write commands when invoked directly — `/lp-inf`, `/lp-resolve-todo-parallel`, `/lp-ship` (BL-356, v2.1.6). The gate is enforced by a single shared helper (`assert_autonomous_ack`) so all four refuse-messages stay byte-identical.
+9. **Autonomous-execution acknowledgment**: `.launchpad/autonomous-ack.md` must exist as a tracked file; absence blocks `/lp-build` AND its three wrapped autonomous-write commands when invoked directly: `/lp-inf`, `/lp-resolve-todo-parallel`, `/lp-ship` (BL-356, v2.1.6). The gate is enforced by a single shared helper (`assert_autonomous_ack`) so all four refuse-messages stay byte-identical.
 10. **Commands-hash audit**: `LP_CONFIG_REVIEWED` env var must match the canonical commands hash; mismatch blocks `/lp-build`.
 11. **Integrity guard**: `/lp-build` refuses if section spec and `autonomous-ack.md` were introduced in the same commit.
 12. **Audit log**: `.launchpad/audit.log` (gitignored by default; opt-in via `audit.committed: true`) records every command with timestamp, git user, commit SHA, and content hash.
@@ -869,7 +881,7 @@ Print the current canonical hash with `${CLAUDE_PLUGIN_ROOT}/scripts/plugin-conf
 /plugin install launchpad@builtform --scope <same-scope>
 ```
 
-Restart Claude Code after updating.
+Restart Claude Code after updating. The marketplace follows the `stable` branch, so this brings you the latest verified release. On Codex, see [Updating and removing on Codex](#updating-and-removing-on-codex).
 
 ### Refreshing a stale plugin cache
 
@@ -891,7 +903,7 @@ The ceremony assumes:
 
 - The PR has merged to `main` with all CI green
 - `docs/releases/v<MAJOR>.<MINOR>.<PATCH>.md` exists at the merge commit (see [release-notes file required feedback](../tasks/BACKLOG.md#release-process))
-- A post-tag verification workflow (`verify-v2-ship.yml` for LaunchPad) runs on tag push and validates the released state
+- A post-tag verification workflow (`verify-v2-ship`, in `.github/workflows/v2-release.yml` for LaunchPad) runs on tag push and validates the released state
 
 **Steps:**
 
@@ -904,9 +916,9 @@ The ceremony assumes:
 2. **Push the tag and watch verification:**
    ```bash
    git push origin v1.2.3
-   gh run watch  # or: gh run list --workflow=verify-v2-ship.yml --limit 1
+   gh run watch  # or: gh run list --workflow=v2-release.yml --limit 1
    ```
-   The verification job at v2.0 is single-shot and runs four checks: tag SHA matches the squash-merge HEAD, `plugin.json` version matches the tag, no pre-release version residual remains in the tagged tree, and no leakage regex hits. If it fails, follow the [SCAFFOLD_OPERATIONS.md §7 rollback procedure](../architecture/SCAFFOLD_OPERATIONS.md#7-rollback-procedure-layer-2-f-11--p1-4--layer-3-simplicity-p1-e--scope-p1-2--product-p2-1-compressed) (compressed 4-step v2.0 form).
+   The verification job checks the tag's semver shape, that the tag SHA matches the squash-merge HEAD, that `plugin.json` version matches the tag, that no pre-release version residual remains in the tagged tree, that no leakage regex hits, that the stack catalog is intact, and that every catalog and contract document was validated within the last 30 days. For LaunchPad, a `promote-stable` job then refuses to continue if `docs/releases/v1.2.3.md` is missing, and otherwise fast-forwards the `stable` branch to the tag. `stable` only moves forward, so a broken release is fixed by shipping a new patch. If verification fails on a transient error, rerun the failed jobs of the original tag-push run with `gh run rerun <run-id> --failed`; the manual `workflow_dispatch` lane verifies only and never moves `stable`. For other failures, follow the [SCAFFOLD_OPERATIONS.md §7 rollback procedure](../architecture/SCAFFOLD_OPERATIONS.md#7-rollback-procedure-layer-2-f-11--p1-4--layer-3-simplicity-p1-e--scope-p1-2--product-p2-1-compressed) (compressed 4-step v2.0 form).
 3. **Publish the release:**
    ```bash
    gh release create v1.2.3 --notes-file docs/releases/v1.2.3.md
@@ -914,10 +926,10 @@ The ceremony assumes:
 
 The ceremony exists for two reasons specific to LaunchPad-shape artifacts:
 
-- **Marketplace soak window.** Anthropic's plugin marketplace pulls from tagged releases; tagging _after_ merge gives a soak window where downstream installs catch any post-merge issue before pinning.
+- **Marketplace soak window.** The BuiltForm marketplace installs LaunchPad from `stable`, which moves only after a tag passes verification. Tagging _after_ merge gives a soak window on `main` before marketplace users receive the change.
 - **Editorial release cadence.** Release notes are hand-authored from the PR set since the last tag, not auto-generated. The maintainer owns the framing of what shipped.
 
-`/lp-release` (BL-246, scoped for v2.1) automates this 3-step ceremony as a single command. Until v2.1 ships, run the ceremony by hand using the steps above.
+`/lp-release` (BL-246, not yet shipped) would automate this 3-step ceremony as a single command. Until it ships, run the ceremony by hand using the steps above.
 
 ### Pattern B: Branch-triggered automation ([ulc.spec.org](https://github.com/ulc-spec/ulc), goreleaser projects)
 
@@ -945,14 +957,14 @@ Branch-triggered automation fits when:
 
 ### Choosing between them
 
-| Property                          | Manual ceremony (Pattern A)                                   | Branch-triggered (Pattern B)                                       |
-| --------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Soak window between merge and tag | Yes (intentional)                                             | No (merge ≡ release)                                               |
-| Release notes                     | Hand-authored                                                 | Mechanical from CHANGELOG                                          |
-| Build targets                     | Plugin marketplace, simple package registries                 | Cross-platform binaries (goreleaser strength)                      |
-| Maintainer overhead per release   | 3 commands + CI watch                                         | 0 (merge already happened)                                         |
-| Best fit                          | Plugins, hand-curated libraries, specs, marketplace artifacts | CLIs with binary builds, projects on a tight commit-driven cadence |
-| `/lp-release` (v2.1) automates it | Yes                                                           | No (already automated)                                             |
+| Property                             | Manual ceremony (Pattern A)                                   | Branch-triggered (Pattern B)                                       |
+| ------------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Soak window between merge and tag    | Yes (intentional)                                             | No (merge ≡ release)                                               |
+| Release notes                        | Hand-authored                                                 | Mechanical from CHANGELOG                                          |
+| Build targets                        | Plugin marketplace, simple package registries                 | Cross-platform binaries (goreleaser strength)                      |
+| Maintainer overhead per release      | 3 commands + CI watch                                         | 0 (merge already happened)                                         |
+| Best fit                             | Plugins, hand-curated libraries, specs, marketplace artifacts | CLIs with binary builds, projects on a tight commit-driven cadence |
+| `/lp-release` (planned) automates it | Yes                                                           | No (already automated)                                             |
 
 LaunchPad keeps Pattern A for its own releases for three reasons: the marketplace requires the soak window, there are no binaries to cross-compile (so goreleaser's value doesn't apply), and release notes are editorial rather than mechanical. growth-toolkit follows the same pattern for the same reasons.
 
@@ -982,7 +994,7 @@ For the canonical post-tag verification flow and the rollback procedure if `veri
 
 **`/lp-build` refuses: "LP_CONFIG_REVIEWED does not match current commands section."** Regenerate the canonical hash with `${CLAUDE_PLUGIN_ROOT}/scripts/plugin-config-hash.py`, update the CI env var, re-run.
 
-**`/lp-build`, `/lp-inf`, `/lp-resolve-todo-parallel`, or `/lp-ship` refuses: "Autonomous execution requires `.launchpad/autonomous-ack.md`."** All four autonomous-write commands enforce the same gate (BL-356, v2.1.6). The refuse-message embeds a starter template beginning with `# Autonomous Execution Acknowledgment` — copy it into `.launchpad/autonomous-ack.md`, edit name / email / date, commit, then re-run the command.
+**`/lp-build`, `/lp-inf`, `/lp-resolve-todo-parallel`, or `/lp-ship` refuses: "Autonomous execution requires `.launchpad/autonomous-ack.md`."** All four autonomous-write commands enforce the same gate (BL-356, v2.1.6). The refuse-message embeds a starter template beginning with `# Autonomous Execution Acknowledgment`; copy it into `.launchpad/autonomous-ack.md`, edit name / email / date, commit, then re-run the command.
 
 **L2 commands (`/lp-commit`, `/lp-review`, `/lp-ship`, `/lp-harden-plan`) halt at Step 0 Lite with "run /lp-define."** `.launchpad/agents.yml` is missing, run `/lp-define` to seed it. `/lp-define` is the authoritative seeder for that file.
 
