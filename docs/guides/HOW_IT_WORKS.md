@@ -97,7 +97,7 @@ v2.x greenfield projects scaffolded via `/lp-brainstorm` â†’ `/lp-pick-stack` â†
 
 Restart Claude Code after updating. The install cache (`~/.claude/plugins/cache/builtform/launchpad/<version>/`) is a snapshot taken at install time, so uninstall + marketplace-update + reinstall is the supported refresh flow.
 
-The BuiltForm marketplace installs LaunchPad from its `stable` branch. The release workflow moves `stable` forward only after a release tag passes verification, so an update brings you the latest verified release on both Claude Code and Codex.
+The Frameworked marketplace installs LaunchPad from its `stable` branch. The release workflow moves `stable` forward only after a release tag passes verification, so an update brings you the latest verified release on both Claude Code and Codex.
 
 ---
 
@@ -926,7 +926,7 @@ The ceremony assumes:
 
 The ceremony exists for two reasons specific to LaunchPad-shape artifacts:
 
-- **Marketplace soak window.** The BuiltForm marketplace installs LaunchPad from `stable`, which moves only after a tag passes verification. Tagging _after_ merge gives a soak window on `main` before marketplace users receive the change.
+- **Marketplace soak window.** The Frameworked marketplace installs LaunchPad from `stable`, which moves only after a tag passes verification. Tagging _after_ merge gives a soak window on `main` before marketplace users receive the change.
 - **Editorial release cadence.** Release notes are hand-authored from the PR set since the last tag, not auto-generated. The maintainer owns the framing of what shipped.
 
 `/lp-release` (BL-246, not yet shipped) would automate this 3-step ceremony as a single command. Until it ships, run the ceremony by hand using the steps above.
