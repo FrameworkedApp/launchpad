@@ -80,7 +80,9 @@ MAX_AGENT_FRONTMATTER_BYTES = 64_000
 
 _LOGGER = logging.getLogger("plugin_agent_scope_filter")
 
-_PLUGIN_AGENTS_ROOT = (Path(__file__).resolve().parent.parent / "agents").resolve()
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+
+_PLUGIN_AGENTS_ROOT = (_SCRIPTS_DIR.parent / "agents").resolve()
 
 _AGENT_SUBDIRS: tuple[str, ...] = (
     "research",
@@ -226,13 +228,17 @@ def _load_agent_index() -> Mapping[str, dict[str, str]]:
     return MappingProxyType(index)
 
 
+def _ensure_scripts_on_path() -> None:
+    """Make sibling packages importable for the lazy imports below."""
+    if str(_SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPTS_DIR))
+
+
 def _active_stack_enum() -> frozenset[str]:
     """Lazy import of STACK_ID_ACTIVE_ENUM so module import does not pull in
     the Jinja renderer. Fetched on every filter call (cheap dict lookup
     amortizes across the lru_cached enum frozenset)."""
-    scripts_dir = Path(__file__).resolve().parent
-    if str(scripts_dir) not in sys.path:
-        sys.path.insert(0, str(scripts_dir))
+    _ensure_scripts_on_path()
     from plugin_default_generators._renderer_base import STACK_ID_ACTIVE_ENUM
 
     return STACK_ID_ACTIVE_ENUM
@@ -271,8 +277,13 @@ def filter_agents_by_stacks(
       * `core_pipeline`: always include
       * `stack:any`: always include
       * `stack:<id>`: include iff `<id>` or one of its known family members
-        is in `stacks`
+        is in `stacks` or in the canonical ids `stacks` maps to
       * `design_quality` + `skill_quality`: NEVER include (callers pre-filter)
+
+    `stacks` may hold canonical ids, family keys, or scaffolders.yml keys
+    (for example `hono`, persisted from a scaffold receipt). The latter are
+    mapped through `lp_pick_stack.stack_aliases.canonical_stack_ids` before
+    validation and matching.
 
     Missing-name handling: WARN + drop (cycle-3 spec-flow P1-2). Caller
     reads `last_dropped_names()` for partial-drop banner.
@@ -290,7 +301,8 @@ def filter_agents_by_stacks(
     core_pipeline + stack:any agents).
 
     Raises:
-      ValueError: stack id not in STACK_ID_ACTIVE_ENUM.
+      ValueError: stack id that maps to neither a STACK_ID_ACTIVE_ENUM
+        member nor a family key.
       EmptyFilterResultError: every input name is missing from the agent index.
       NoMatchingAgentsError: all resolved agents are excluded by stack scope.
     """
@@ -310,16 +322,24 @@ def filter_agents_by_stacks(
         return []
     active_enum = _active_stack_enum()
     accepted_stack_inputs = active_enum | frozenset(STACK_FAMILY_MEMBERS)
-    bogus = [s for s in stack_list if s not in accepted_stack_inputs]
+    _ensure_scripts_on_path()
+    from lp_pick_stack.stack_aliases import canonical_stack_ids
+
+    # Validate the canonical form: an alias such as `hono` is accepted because
+    # it maps to an enum id, while an id the table does not know (including
+    # "") passes through unchanged and is reported under its persisted name.
+    canonical = canonical_stack_ids(stack_list)
+    bogus = [s for s in canonical if s not in accepted_stack_inputs]
     if bogus:
         raise ValueError(
             f"unknown stack id(s) {bogus!r}; expected one of "
-            f"{sorted(accepted_stack_inputs)}"
+            f"{sorted(accepted_stack_inputs)} or a scaffolders.yml key that "
+            "maps to one"
         )
     index = _load_agent_index()
     survivors: list[str] = []
     dropped: list[str] = []
-    stacks_set = set(stack_list)
+    stacks_set = set(stack_list) | set(canonical)
     for name in names:
         meta = index.get(name)
         if meta is None:

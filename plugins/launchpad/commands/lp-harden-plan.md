@@ -90,7 +90,9 @@ Read `harden_plan_agents` from `agents.yml`.
 harden_plan_conditional_agents` through
 `plugin_agent_scope_filter.filter_agents_by_stacks(<combined>, stacks)`
 where `stacks = plugin_config_loader.read_stacks(cwd)`. Step 3.5
-(doc-reviewers) is NOT filtered — they are `core_pipeline` always-load.
+(doc-reviewers) is NOT filtered: they are `core_pipeline` always-load.
+Persisted scaffolders.yml keys such as `hono` are mapped to canonical stack
+ids first, as in `/lp-review` Step 3.
 
 **Pass-through fallback** (same banner contract as `/lp-review` Step 3):
 if the filter raises ANY exception, catch broadly, log INFO with the

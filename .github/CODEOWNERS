@@ -59,6 +59,7 @@
 # lands in front of an owner who can interpret it.
 /plugins/launchpad/scripts/lp_pick_stack/__init__.py        @foadshafighi
 /plugins/launchpad/scripts/lp_pick_stack/decision_writer.py @foadshafighi
+/plugins/launchpad/scripts/lp_pick_stack/stack_aliases.py   @foadshafighi
 /plugins/launchpad/scripts/plugin-config-loader.py          @foadshafighi
 /plugins/launchpad/scripts/lp_bootstrap/                    @foadshafighi
 /docs/architecture/SCAFFOLD_HANDSHAKE.md                    @foadshafighi

@@ -846,6 +846,7 @@ SCHEMA_SOURCE_FILES = (
     # scaffold-decision schema sources
     "plugins/launchpad/scripts/lp_pick_stack/__init__.py",  # SCHEMA_VERSION_V2_1, identity regexes
     "plugins/launchpad/scripts/lp_pick_stack/decision_writer.py",  # build_decision_payload, validate_identity
+    "plugins/launchpad/scripts/lp_pick_stack/stack_aliases.py",  # CATALOG_ALIASES + COMPOSITION_REDUCTIONS behind derive_stacks
     "plugins/launchpad/scripts/plugin-config-loader.py",  # read_scaffold_decision, read_bootstrap_manifest
     # bootstrap-manifest schema sources (Phase 3+ live)
     "plugins/launchpad/scripts/lp_bootstrap/__init__.py",  # BootstrapErrorCode + INFRASTRUCTURE_FILES + envelope constants

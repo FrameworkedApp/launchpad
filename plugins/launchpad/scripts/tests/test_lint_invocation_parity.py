@@ -253,7 +253,6 @@ def test_ruff_pin_matches_requirements() -> None:
 # config: deriving it would make the assertion below compare the config to
 # itself and pass under any edit.
 _SUPPRESSED_SCHEMA_FILES = {
-    "decision_writer.py",
     "manifest_writer.py",
     "_renderer_base.py",
 }
@@ -313,10 +312,9 @@ def test_suppression_scope_is_exactly_the_schema_source_files(ruff_cache: Path) 
     # I001 emits one diagnostic per unsorted BLOCK, so adding a misordered
     # import INSIDE an already-violating block leaves both the count and the
     # start row unchanged while concealing a real regression. Only the span
-    # grows. Verified: inserting one import into decision_writer.py's block
-    # moves it from (21, 48) to (21, 49).
+    # grows. Verified while decision_writer.py was still suppressed: inserting
+    # one import into its block moved it from (21, 48) to (21, 49).
     expected = {
-        ("decision_writer.py", 21, 48),
         ("manifest_writer.py", 45, 57),
         ("_renderer_base.py", 560, 567),
     }

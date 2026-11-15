@@ -52,7 +52,7 @@ if str(VENDOR) not in sys.path:
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from lp_pick_stack.decision_writer import derive_stacks  # noqa: E402
+from lp_pick_stack.stack_aliases import canonical_stack_ids  # noqa: E402
 from plugin_default_generators._renderer_base import (  # noqa: E402
     RendererBase,
     SecretScannerViolation,
@@ -385,6 +385,7 @@ def _build_jinja_context(
     # with user-authored content from `/lp-brainstorm`.
     brainstorm = read_brainstorm_summary(repo_root)
 
+    stacks = detector_report.get("stacks", [])
     return {
         "product_name": product_name,
         "stack_summary": adapter_out["product_context"]["stack_summary"],
@@ -396,7 +397,11 @@ def _build_jinja_context(
         "product_context": adapter_out["product_context"],
         "commands": adapter_out["commands"],
         "manifests": relative_manifests,
-        "stacks": detector_report.get("stacks", []),
+        "stacks": stacks,
+        # Receipt-driven runs persist scaffolders.yml keys (`hono`, `next`)
+        # in `stacks`; templates that key on STACK_ID_ACTIVE_ENUM ids read
+        # this canonical form instead.
+        "canonical_stacks": canonical_stack_ids(stacks),
         "pipeline_design_enabled": adapter_out["pipeline_overrides"].get(
             "design_enabled", True
         ),
@@ -926,7 +931,7 @@ def generate(
         adapter_out = _rewrite_adapter_paths(adapter_out, receipt_layer_paths, stacks)
 
     seeded_commands: dict[str, list[str]] = {}
-    family = primary_family_for_stacks(derive_stacks([{"stack": s} for s in stacks]))
+    family = primary_family_for_stacks(canonical_stack_ids(s for s in stacks if s))
     required_toolchains = _FAMILY_TOOLCHAINS.get(family)
     if required_toolchains is not None and required_toolchains.issubset(
         receipt_toolchains
