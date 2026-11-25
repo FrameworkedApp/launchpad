@@ -43,6 +43,12 @@ class LaneRepo:
             "if args[:2] == ['ls-remote', 'origin'] and 'LS_REMOTE_OUTPUT' in os.environ:\n"
             "    print(os.environ['LS_REMOTE_OUTPUT'])\n"
             "    sys.exit(0)\n"
+            "if args[:3] == ['ls-remote', '--tags', 'origin']:\n"
+            "    if os.environ.get('FAIL_LS_TAGS'):\n"
+            "        sys.exit(1)\n"
+            "    if 'LS_TAGS_OUTPUT' in os.environ:\n"
+            "        print(os.environ['LS_TAGS_OUTPUT'])\n"
+            "        sys.exit(0)\n"
             f"os.execv({real_git!r}, [{real_git!r}, *args])\n")
         git_stub.chmod(0o755)
         self.env = {
@@ -672,3 +678,15 @@ def test_release_older_than_first_hundred_is_found(lane, command):
     if command == "plan":
         assert "done=true" in output
     assert not lane.creates()
+
+
+@pytest.mark.parametrize("env,reason", [
+    ({"LS_TAGS_OUTPUT": "not-a-sha\trefs/tags/v2.6.0\n"}, "Remote tags are unreadable"),
+    ({"LS_TAGS_OUTPUT": "a" * 40}, "Remote tags are unreadable"),
+    ({"FAIL_LS_TAGS": "1"}, "git ls-remote failed"),
+])
+def test_publish_live_tag_read_refuses_without_writes(lane, env, reason):
+    output = lane.unchanged("publish", 1, **env)
+    assert reason in output
+    assert lane.calls("gh") == [["gh", "api", "repos/{owner}/{repo}/releases?per_page=100", "--paginate", "--slurp"]]
+    assert "refs/tags/v2.5.0" not in lane.refs()
