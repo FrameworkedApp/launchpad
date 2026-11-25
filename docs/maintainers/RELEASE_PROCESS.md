@@ -162,11 +162,13 @@ A fix merged after a failed release carries `no-release` when it keeps the versi
 
 A failed job opens or comments on `Release vX.Y.Z failed`. If the version is unreadable, the title is `Release failed (version unreadable)`. The body contains the run URL, commit and job conclusions. The run page is the source of truth, including cancellations and timeouts. Close the issue by hand after the failure is resolved; the lane does not close it automatically.
 
-The three retry paths are equivalent:
+Choose a retry path:
 
 1. Re-run the failed jobs: `gh run rerun <run-id> --failed`.
 2. Dispatch from `main`: `gh workflow run release.yml --ref main`.
 3. Merge the fix or another change to `main`; the next push retries the version.
+
+Re-running failed jobs keeps the original run's commit and lane script. A new dispatch from `main` or the next push uses its own commit and lane script, so it can include a merged fix. An existing valid tag still selects the tagged commit for release content and checks.
 
 Two states require maintainer intervention before retrying:
 
