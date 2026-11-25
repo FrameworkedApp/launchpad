@@ -31,7 +31,6 @@ Commands appear in their Claude Code form, `/lp-<name>`. On Codex the same comma
 - [Security considerations](#security-considerations)
 - [Configuration](#configuration)
 - [Maintenance](#maintenance)
-- [Releasing a versioned artifact](#releasing-a-versioned-artifact)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -99,7 +98,7 @@ Restart Claude Code after updating. The install cache (`~/.claude/plugins/cache/
 
 **Installed before 2.4.0?** The marketplace was named `builtform` until 2.4.0. A `launchpad@builtform` install keeps working and keeps updating; its cache is under `~/.claude/plugins/cache/builtform/`. To move to the new name, run `/plugin marketplace remove builtform` (this also uninstalls its plugins), `/plugin marketplace add github:FrameworkedApp/marketplace`, then `/plugin install launchpad@frameworked`.
 
-The Frameworked marketplace installs LaunchPad from its `stable` branch. The release workflow moves `stable` forward only after a release tag passes verification, so an update brings you the latest verified release on both Claude Code and Codex.
+The Frameworked marketplace installs LaunchPad from its `stable` branch. Updating brings you the latest release on both Claude Code and Codex.
 
 ---
 
@@ -897,89 +896,6 @@ Restart Claude Code after updating. The marketplace follows the `stable` branch,
 ### Refreshing a stale plugin cache
 
 The plugin cache at `~/.claude/plugins/cache/frameworked/launchpad/<version>/` is a snapshot taken at install time. After updating LaunchPad, always refresh via the uninstall + marketplace-update + reinstall flow above, the cache does not update in place.
-
----
-
-## Releasing a versioned artifact
-
-This section documents how to ship a tagged release for a LaunchPad-managed plugin, CLI, library, or specification project. It does **not** apply to SaaS-shape projects scaffolded by `/lp-pick-stack`, those ship continuously to a hosted environment and have no editorial release cadence. It applies only to artifacts where a tag like `v1.2.3` is itself the deliverable: plugins published to a marketplace, CLIs published as binaries, libraries published to a package registry, specs published as document sets.
-
-Two patterns are in use across the LaunchPad-managed ecosystem. They aren't competing, they fit different artifact shapes. Pick the one that matches yours.
-
-### Pattern A: Manual ceremony (LaunchPad, growth-toolkit)
-
-Used by LaunchPad itself and by [growth-toolkit](https://github.com/FrameworkedApp/growth-toolkit). The maintainer drives a 3-step ceremony: tag the merge commit, push the tag, watch the post-tag verification job, then publish a release with hand-authored notes.
-
-The ceremony assumes:
-
-- The PR has merged to `main` with all CI green
-- `docs/releases/v<MAJOR>.<MINOR>.<PATCH>.md` exists at the merge commit (see [release-notes file required feedback](../tasks/BACKLOG.md#release-process))
-- A post-tag verification workflow (`verify-v2-ship`, in `.github/workflows/v2-release.yml` for LaunchPad) runs on tag push and validates the released state
-
-**Steps:**
-
-1. **Tag the merge commit:**
-   ```bash
-   git fetch origin main
-   git checkout origin/main
-   git tag v1.2.3
-   ```
-2. **Push the tag and watch verification:**
-   ```bash
-   git push origin v1.2.3
-   gh run watch  # or: gh run list --workflow=v2-release.yml --limit 1
-   ```
-   The verification job checks the tag's semver shape, that the tag SHA matches the squash-merge HEAD, that `plugin.json` version matches the tag, that no pre-release version residual remains in the tagged tree, that no leakage regex hits, that the stack catalog is intact, and that every catalog and contract document was validated within the last 30 days. For LaunchPad, a `promote-stable` job then refuses to continue if `docs/releases/v1.2.3.md` is missing, and otherwise fast-forwards the `stable` branch to the tag. `stable` only moves forward, so a broken release is fixed by shipping a new patch. If verification fails on a transient error, rerun the failed jobs of the original tag-push run with `gh run rerun <run-id> --failed`; the manual `workflow_dispatch` lane verifies only and never moves `stable`. For other failures, follow the [SCAFFOLD_OPERATIONS.md §7 rollback procedure](../architecture/SCAFFOLD_OPERATIONS.md#7-rollback-procedure-layer-2-f-11--p1-4--layer-3-simplicity-p1-e--scope-p1-2--product-p2-1-compressed) (compressed 4-step v2.0 form).
-3. **Publish the release:**
-   ```bash
-   gh release create v1.2.3 --notes-file docs/releases/v1.2.3.md
-   ```
-
-The ceremony exists for two reasons specific to LaunchPad-shape artifacts:
-
-- **Marketplace soak window.** The Frameworked marketplace installs LaunchPad from `stable`, which moves only after a tag passes verification. Tagging _after_ merge gives a soak window on `main` before marketplace users receive the change.
-- **Editorial release cadence.** Release notes are hand-authored from the PR set since the last tag, not auto-generated. The maintainer owns the framing of what shipped.
-
-`/lp-release` (BL-246, not yet shipped) would automate this 3-step ceremony as a single command. Until it ships, run the ceremony by hand using the steps above.
-
-### Pattern B: Branch-triggered automation ([ulc.spec.org](https://github.com/ulc-spec/ulc), goreleaser projects)
-
-Used by spec/CLI/library projects where releases are commit-driven rather than editorial, the merge of a `release/v<MAJOR>.<MINOR>.<PATCH>` branch _is_ the release event, no manual ceremony required.
-
-The pattern assumes:
-
-- A `release.yml` GitHub Actions workflow watches for merges from `release/v*` branches into `main`
-- The workflow auto-tags the merge commit with the branch's version, then auto-publishes via [goreleaser](https://goreleaser.com/) (for Go binaries) or an equivalent multi-target publisher
-- The CHANGELOG section update lands in the same `release/v*` branch as the version bump
-
-**Maintainer flow:**
-
-1. Open a `release/v1.2.3` branch with the version bump + CHANGELOG section update.
-2. Open a PR; review and merge.
-3. The workflow tags, builds, and publishes automatically. No `git tag`, no `gh release create`, no soak window.
-
-Branch-triggered automation fits when:
-
-- Release notes are derived mechanically from commit messages or CHANGELOG (no editorial layer)
-- Build artifacts are binaries that need cross-platform compilation (goreleaser shines here)
-- The maintainer is comfortable with "merge ⇒ release" as the operating model
-
-`/lp-release` does **not** target this pattern. Projects using branch-triggered automation already have the workflow doing the work; no slash command is needed. LaunchPad-managed projects in this category should not adopt `/lp-release` when v2.1 ships, keep the existing automation.
-
-### Choosing between them
-
-| Property                             | Manual ceremony (Pattern A)                                   | Branch-triggered (Pattern B)                                       |
-| ------------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Soak window between merge and tag    | Yes (intentional)                                             | No (merge ≡ release)                                               |
-| Release notes                        | Hand-authored                                                 | Mechanical from CHANGELOG                                          |
-| Build targets                        | Plugin marketplace, simple package registries                 | Cross-platform binaries (goreleaser strength)                      |
-| Maintainer overhead per release      | 3 commands + CI watch                                         | 0 (merge already happened)                                         |
-| Best fit                             | Plugins, hand-curated libraries, specs, marketplace artifacts | CLIs with binary builds, projects on a tight commit-driven cadence |
-| `/lp-release` (planned) automates it | Yes                                                           | No (already automated)                                             |
-
-LaunchPad keeps Pattern A for its own releases for three reasons: the marketplace requires the soak window, there are no binaries to cross-compile (so goreleaser's value doesn't apply), and release notes are editorial rather than mechanical. growth-toolkit follows the same pattern for the same reasons.
-
-For the canonical post-tag verification flow and the rollback procedure if `verify-v2-ship` fails, see [SCAFFOLD_OPERATIONS.md §7](../architecture/SCAFFOLD_OPERATIONS.md#7-rollback-procedure-layer-2-f-11--p1-4--layer-3-simplicity-p1-e--scope-p1-2--product-p2-1-compressed). For the Keep-a-Changelog convention used in `docs/releases/`, see [CHANGELOG.md](../../CHANGELOG.md).
 
 ---
 

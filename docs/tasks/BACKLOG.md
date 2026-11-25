@@ -1334,6 +1334,8 @@ These are the polish/hardening items the agent surfaced; ruff itself catches a s
 
 #### BL-246 - v2.2: `/lp-release [version]` command — automate the manual ship ceremony
 
+**Status (2026-11-25)**: SUPERSEDED. Releases are cut by the `release` workflow when a version-bump PR merges (tag, GitHub release and `stable` in one run), so the `/lp-release` command will not be built.
+
 **Status (2026-05-07)**: RE-TARGETED v2.1 → v2.1.1. v2.1.0 ship is using the manual runbook (tag → push → wait for verify-v2-ship → `gh release create`) inherited from v2.0.0. Automating into a `/lp-release` command was scoped for v2.1 but slipped through the architecture-doc → master-plan handoff. Manual ceremony is sound for v2.1.0; automation lands in v2.1.1.
 
 **Driver**: v2.0.0 ship was a manual 3-step ceremony (tag → push → wait for `verify-v2-ship` → `gh release create --notes-file`). Documented as a runbook in v2.0.1 (BL-241 §6); v2.1 promotes the runbook to an executable command so LaunchPad and growth-toolkit (and any downstream LaunchPad-managed plugin/CLI/library/spec project) ship versioned releases with a single command instead of running the runbook by hand each time.
