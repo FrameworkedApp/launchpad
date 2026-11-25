@@ -414,3 +414,100 @@ def test_shipped_path_quoting(lane, name):
     lane.commit()
     lane.unchanged("pr-guard", 1)
     assert lane.calls("lint") == []
+
+
+@pytest.mark.parametrize("name", ["release"])
+def test_w1_workflow_permissions(name):
+    import yaml
+
+    root = SCRIPT.parents[3]
+    workflow = yaml.safe_load((root / ".github/workflows" / f"{name}.yml").read_text())
+    assert workflow["permissions"] == {}
+
+
+@pytest.mark.parametrize("name", ["release"])
+def test_w2_workflow_write_permissions(name):
+    import yaml
+
+    root = SCRIPT.parents[3]
+    workflow = yaml.safe_load((root / ".github/workflows" / f"{name}.yml").read_text())
+    for job_name, job in workflow["jobs"].items():
+        for resource, access in job.get("permissions", {}).items():
+            if access == "write":
+                assert name == "release"
+                assert (job_name, resource) in {("publish", "contents"), ("report", "issues")}
+
+
+@pytest.mark.parametrize("name", ["release"])
+def test_w3_no_expressions_in_run(name):
+    import yaml
+
+    root = SCRIPT.parents[3]
+    workflow = yaml.safe_load((root / ".github/workflows" / f"{name}.yml").read_text())
+    for job in workflow["jobs"].values():
+        for step in job["steps"]:
+            assert "${{" not in step.get("run", "")
+
+
+@pytest.mark.parametrize("manifest,existing,title", [
+    ('{"version":"2.5.0"}', "", "Release v2.5.0 failed"),
+    ('{"version":"2.5.0"}', "42", "Release v2.5.0 failed"),
+    ('{"version":"2.5.0-rc1"}', "", "Release failed (version unreadable)"),
+    ('broken JSON', "", "Release failed (version unreadable)"),
+    (None, "", "Release failed (version unreadable)"),
+])
+def test_report_failure_offline(tmp_path, manifest, existing, title):
+    import yaml
+
+    root = SCRIPT.parents[3]
+    workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
+    script = workflow["jobs"]["report"]["steps"][-1]["run"]
+    if manifest is not None:
+        path = tmp_path / MANIFESTS[0]
+        path.parent.mkdir(parents=True)
+        path.write_text(manifest)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text(f"#!{sys.executable}\n" + '''import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+entry = {"args": args}
+if args[:2] == ["issue", "list"]:
+    print(os.environ["FAKE_ISSUE"])
+elif args[:2] in (["issue", "create"], ["issue", "comment"]):
+    entry["body"] = Path(args[args.index("--body-file") + 1]).read_text()
+else:
+    sys.exit(2)
+with open(os.environ["REPORT_CALLS"], "a") as log:
+    log.write(json.dumps(entry) + "\\n")
+''')
+    gh.chmod(0o755)
+    calls_file = tmp_path / "calls"
+    sha = "a" * 40
+    env = {
+        "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
+        "GH_TOKEN": "fixture-only",
+        "REPO": "fixture/repository",
+        "EVENT_SHA": sha,
+        "RUN_URL": "https://example.invalid/run/1",
+        "RUNNER_TEMP": str(tmp_path),
+        "VERIFY_RESULT": "failure",
+        "PUBLISH_RESULT": "skipped",
+        "FAKE_ISSUE": existing,
+        "REPORT_CALLS": str(calls_file),
+    }
+    subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env,
+                   check=True, capture_output=True, text=True, timeout=15)
+    calls = [json.loads(line) for line in calls_file.read_text().splitlines()]
+    assert len(calls) == 2
+    lookup, write = calls
+    assert lookup["args"][:2] == ["issue", "list"]
+    assert lookup["args"][lookup["args"].index("--search") + 1] == title + " in:title"
+    if existing:
+        assert write["args"][:3] == ["issue", "comment", existing]
+    else:
+        assert write["args"][:2] == ["issue", "create"]
+        assert write["args"][write["args"].index("--title") + 1] == title
+    assert write["body"] == (f"Run: https://example.invalid/run/1\nCommit: {sha}\n"
+                              "verify: failure\npublish: skipped\n")
