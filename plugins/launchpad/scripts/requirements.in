@@ -33,7 +33,7 @@ markupsafe==3.0.4      # transitive of jinja2; pinned explicitly for repro
 
 # --- v2.1.1 Phase 4 Layer 3 static analysis ---
 
-ruff==0.17.4           # style + import-order + bugbear (lefthook pre-commit)
+ruff==0.17.5           # style + import-order + bugbear (lefthook pre-commit)
 # pyright pulls nodeenv, which downloads a Node.js binary at install-time.
 # That binary download is OUTSIDE pip's hash coverage — a residual supply-chain
 # hole at the pyright/nodeenv boundary. v2.1.x BL candidate: evaluate mypy (no
@@ -47,5 +47,5 @@ bandit==1.9.4          # security audit at MEDIUM+ (lefthook pre-commit)
 # Whoever bumps semgrep past those pins: re-lock, then delete the matching
 # suppression entries. (Earlier pins on click and mcp==1.23.3 cleared at
 # semgrep 1.171.0 and 1.177.0; their suppressions have been removed.)
-semgrep==1.185.0       # general patterns (pre-commit) + LP-internal invariants (pre-push)
+semgrep==1.186.0       # general patterns (pre-commit) + LP-internal invariants (pre-push)
 pytest==9.2.0          # test runner (lefthook pre-push + CI v2-handshake-lint); pinned for hash coverage (Codex PR #62 P1 #2)
