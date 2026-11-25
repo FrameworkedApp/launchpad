@@ -158,7 +158,7 @@ The label defers shipped changes to the next release; it does not approve the ch
 
 A fix merged after a failed release carries `no-release` when it keeps the version unchanged. Its merge starts another run that completes the pending release once its checks and state permit it.
 
-A pending release ships the commit its retry selects, so a change merged with `no-release` after the failed run ships in it too. Update the release notes first when such a change belongs in them.
+A pending release ships the commit its retry selects (see Failure and retry). If that commit includes changes merged with `no-release` after the failed run, they ship too; update the release notes first when one of them belongs there.
 
 ## Failure and retry
 
