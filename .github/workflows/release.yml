@@ -43,6 +43,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python "$RUNNER_TEMP/plugin-release-lane.py" plan
 
+      - name: Select the release commit
+        if: steps.plan.outputs.done != 'true'
+        env:
+          RELEASE_SHA: ${{ steps.plan.outputs.sha }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          if [ "$RELEASE_SHA" != "$EVENT_SHA" ]; then
+            git checkout --detach "$RELEASE_SHA"
+          fi
+
       - name: Install vendored deps
         if: steps.plan.outputs.done != 'true'
         run: |
@@ -53,14 +63,7 @@ jobs:
 
       - name: Check the release commit
         if: steps.plan.outputs.done != 'true'
-        env:
-          RELEASE_SHA: ${{ steps.plan.outputs.sha }}
-          EVENT_SHA: ${{ github.sha }}
-        run: |
-          if [ "$RELEASE_SHA" != "$EVENT_SHA" ]; then
-            git checkout --detach "$RELEASE_SHA"
-          fi
-          python "$RUNNER_TEMP/plugin-release-lane.py" checks
+        run: python "$RUNNER_TEMP/plugin-release-lane.py" checks
 
   publish:
     needs: verify
@@ -111,6 +114,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ needs.verify.outputs.sha }}
           EVENT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VERIFY_RESULT: ${{ needs.verify.result }}
@@ -123,7 +127,7 @@ jobs:
           try:
               with open('plugins/launchpad/.claude-plugin/plugin.json') as handle:
                   version = json.load(handle)['version']
-              if not isinstance(version, str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+              if not isinstance(version, str) or not re.fullmatch(r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)', version):
                   raise ValueError('invalid version')
               print(f'Release v{version} failed')
           except (OSError, ValueError, KeyError, TypeError):
@@ -131,8 +135,8 @@ jobs:
           PY
           )
           BODY_FILE="$RUNNER_TEMP/release-failure-body.md"
-          printf 'Run: %s\nCommit: %s\nverify: %s\npublish: %s\n' \
-            "$RUN_URL" "$EVENT_SHA" "$VERIFY_RESULT" "$PUBLISH_RESULT" > "$BODY_FILE"
+          printf 'Run: %s\nCommit: %s\nRelease commit: %s\nverify: %s\npublish: %s\n' \
+            "$RUN_URL" "$EVENT_SHA" "${RELEASE_SHA:-unresolved}" "$VERIFY_RESULT" "$PUBLISH_RESULT" > "$BODY_FILE"
           EXISTING=$(gh issue list --repo "$REPO" --state open \
             --search "${TITLE} in:title" --limit 100 --json number,title \
             --jq "[.[] | select(.title == \"${TITLE}\")] | .[0].number // empty")

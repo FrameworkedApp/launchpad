@@ -76,10 +76,15 @@ args = sys.argv[1:]
 with open(os.environ["LANE_CALLS"], "a") as log:
     log.write(json.dumps(["gh", *args]) + "\\n")
 state = Path(os.environ["LANE_STATE"])
-if args[:2] == ["release", "list"]:
+if args[0] == "api":
     if os.environ.get("FAIL_GH"):
         sys.exit(1)
-    print(state.read_text())
+    if "RELEASE_API_OUTPUT" in os.environ:
+        print(os.environ["RELEASE_API_OUTPUT"])
+    else:
+        entries = [{"tag_name": entry["tagName"], "draft": entry["isDraft"]} for entry in json.loads(state.read_text())]
+        pages = [entries[i:i+100] for i in range(0, len(entries), 100)] or [[]]
+        print(json.dumps(pages))
 elif args[:2] == ["release", "create"]:
     if os.environ.get("CREATE_TIMES"):
         with open(os.environ["CREATE_TIMES"], "a") as times:
@@ -407,6 +412,27 @@ def test_g8_revert_failed_bump(lane):
     assert lane.calls("lint") == [["lint", *args] for args in LINTERS]
 
 
+
+@pytest.mark.parametrize("path,labels,code", [
+    (None, "[]", 0),
+    ("plugins/launchpad/commands/change.md", "[]", 1),
+    ("plugins/launchpad/commands/change.md", '["no-release"]', 0),
+    ("plugins/launchpad/scripts/tests/test_new.py", "[]", 0),
+])
+def test_revert_existing_version_applies_deferral(lane, path, labels, code):
+    lane.tag()
+    lane.version("2.5.1")
+    lane.env["LP_BASE_REF"] = lane.commit()
+    lane.version("2.5.0")
+    if path:
+        lane.write(path, "fixture\n")
+    lane.commit()
+    output = lane.unchanged("pr-guard", code, PR_LABELS=labels)
+    if code:
+        assert path in output and "no-release" in output
+    assert lane.calls("lint") == [["lint", *args] for args in LINTERS]
+
+
 def test_plan_github_output(lane):
     output = lane.root / "output"
     lane.unchanged("plan", GITHUB_OUTPUT=str(output))
@@ -464,10 +490,14 @@ def test_w3_no_expressions_in_run(name):
     ('{"version":"2.5.0"}', "", "Release v2.5.0 failed"),
     ('{"version":"2.5.0"}', "42", "Release v2.5.0 failed"),
     ('{"version":"2.5.0-rc1"}', "", "Release failed (version unreadable)"),
+    ('{"version":"02.4.1"}', "", "Release failed (version unreadable)"),
+    ('{"version":"2.04.1"}', "", "Release failed (version unreadable)"),
+    ('{"version":"2.4.01"}', "", "Release failed (version unreadable)"),
     ('broken JSON', "", "Release failed (version unreadable)"),
     (None, "", "Release failed (version unreadable)"),
 ])
-def test_report_failure_offline(tmp_path, manifest, existing, title):
+@pytest.mark.parametrize("release_sha", ["b" * 40, ""])
+def test_report_failure_offline(tmp_path, manifest, existing, title, release_sha):
     import yaml
 
     root = SCRIPT.parents[3]
@@ -501,6 +531,7 @@ with open(os.environ["REPORT_CALLS"], "a") as log:
         "GH_TOKEN": "fixture-only",
         "REPO": "fixture/repository",
         "EVENT_SHA": sha,
+        "RELEASE_SHA": release_sha,
         "RUN_URL": "https://example.invalid/run/1",
         "RUNNER_TEMP": str(tmp_path),
         "VERIFY_RESULT": "failure",
@@ -520,7 +551,9 @@ with open(os.environ["REPORT_CALLS"], "a") as log:
     else:
         assert write["args"][:2] == ["issue", "create"]
         assert write["args"][write["args"].index("--title") + 1] == title
+    assert workflow["jobs"]["report"]["steps"][-1]["env"]["RELEASE_SHA"] == "${{ needs.verify.outputs.sha }}"
     assert write["body"] == (f"Run: https://example.invalid/run/1\nCommit: {sha}\n"
+                              f"Release commit: {release_sha or 'unresolved'}\n"
                               "verify: failure\npublish: skipped\n")
 
 
@@ -562,14 +595,80 @@ def test_malformed_remote_ref_success_refuses_without_writes(lane, command, resp
 
 @pytest.mark.parametrize("command", ["plan", "publish"])
 @pytest.mark.parametrize("response", [
-    "not JSON",
-    "{}",
-    "[null]",
-    '[{"tagName":null,"isDraft":false}]',
-    '[{"tagName":"v2.5.0","isDraft":"false"}]',
+    "not JSON", "{}", "[]", "[null]", "[[null]]",
+    '[[{"tag_name":null,"draft":false}]]',
+    '[[{"tag_name":"v2.5.0","draft":"false"}]]',
+    '[[], [{"tag_name":"v2.5.0"}]]',
 ])
 def test_malformed_release_list_success_refuses_without_writes(lane, command, response):
-    lane.state_file.write_text(response)
-    output = lane.unchanged(command, 1)
+    output = lane.unchanged(command, 1, RELEASE_API_OUTPUT=response)
     assert "Release list is unreadable" in output
-    assert lane.calls("gh") == [["gh", "release", "list", "--limit", "100", "--json", "tagName,isDraft"]]
+    assert lane.calls("gh") == [["gh", "api", "repos/{owner}/{repo}/releases?per_page=100", "--paginate", "--slurp"]]
+
+
+@pytest.mark.parametrize("version,code", [
+    ("02.4.1", 1), ("2.04.1", 1), ("2.4.01", 1),
+    ("0.0.0", 0), ("10.20.30", 0),
+])
+@pytest.mark.parametrize("command", ["checks", "plan", "publish", "pr-guard"])
+def test_canonical_version_components(lane, version, code, command):
+    lane.env["LP_BASE_REF"] = lane.initial
+    lane.version(version)
+    lane.write(f"docs/releases/v{version}.md", f"# Release v{version}\n")
+    sha = lane.commit()
+    lane.git("push", "origin", "main")
+    lane.env.update(GITHUB_SHA=sha, RELEASE_SHA=sha)
+    if command == "publish" and not code:
+        lane.run(command)
+    else:
+        output = lane.unchanged(command, code)
+        if code:
+            assert "semver" in output
+
+
+def test_w_guard_uses_event_base_sha():
+    import yaml
+
+    workflow = yaml.safe_load((SCRIPT.parents[3] / ".github/workflows/version-guard.yml").read_text())
+    step = workflow["jobs"]["version-guard"]["steps"][-1]
+    assert step["env"]["LP_BASE_REF"] == "${{ github.event.pull_request.base.sha }}"
+
+
+def test_w_release_commit_selected_before_dependency_install():
+    import yaml
+
+    workflow = yaml.safe_load((SCRIPT.parents[3] / ".github/workflows/release.yml").read_text())
+    steps = workflow["jobs"]["verify"]["steps"]
+    install = next(i for i, step in enumerate(steps) if step.get("name") == "Install vendored deps")
+    select = next(i for i, step in enumerate(steps) if 'git checkout --detach "$RELEASE_SHA"' in step.get("run", ""))
+    preserve = next(i for i, step in enumerate(steps) if step.get("run", "").startswith("cp plugins/launchpad/scripts/plugin-release-lane.py"))
+    assert preserve < select < install
+    assert steps[select]["env"]["RELEASE_SHA"] == "${{ steps.plan.outputs.sha }}"
+    assert steps[select]["env"]["EVENT_SHA"] == "${{ github.sha }}"
+    assert steps[select]["if"] == steps[install]["if"] == "steps.plan.outputs.done != 'true'"
+    assert "_vendor/PSUTIL_VERSION" in steps[install]["run"]
+    assert "_vendor/PYYAML_VERSION" in steps[install]["run"]
+    assert steps[-1]["run"] == 'python "$RUNNER_TEMP/plugin-release-lane.py" checks'
+
+
+def test_publish_rechecks_live_version_ceiling(lane):
+    assert "done=false" in lane.unchanged("plan")
+    lane.tag(tag="v2.6.0")
+    lane.git("tag", "-d", "v2.6.0")
+    assert "v2.6.0" not in lane.git("tag", "--list")
+    output = lane.unchanged("publish", 1)
+    assert "v2.6.0" in output and "skip" in output.lower()
+    assert "refs/tags/v2.5.0" not in lane.refs()
+
+
+@pytest.mark.parametrize("command", ["plan", "publish"])
+def test_release_older_than_first_hundred_is_found(lane, command):
+    lane.tag()
+    lane.stable(lane.initial)
+    releases = [{"tagName": f"v3.0.{i}", "isDraft": False} for i in range(101)]
+    releases.append({"tagName": "v2.5.0", "isDraft": False})
+    lane.state_file.write_text(json.dumps(releases))
+    output = lane.unchanged(command)
+    if command == "plan":
+        assert "done=true" in output
+    assert not lane.creates()

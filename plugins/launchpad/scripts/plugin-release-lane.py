@@ -32,7 +32,9 @@ SHIPPED_EXCLUDE = (
     "plugins/launchpad/scripts/plugin_stack_adapters/tests/",
 )
 NO_RELEASE_LABEL = "no-release"
-SEMVER = re.compile(r"\d+\.\d+\.\d+", re.ASCII)
+SEMVER = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", re.ASCII
+)
 SHA = re.compile(r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})")
 
 
@@ -106,6 +108,27 @@ def error(message: str) -> None:
     print(f"::error::{message}", file=sys.stderr)
 
 
+def higher_tag(version: str, tags: list[str]) -> str | None:
+    numbers = tuple(map(int, version.split(".")))
+    higher = [
+        tag
+        for tag in tags
+        if tag.startswith("v")
+        and SEMVER.fullmatch(tag[1:])
+        and tuple(map(int, tag[1:].split("."))) > numbers
+    ]
+    return max(
+        higher, key=lambda tag: tuple(map(int, tag[1:].split("."))), default=None
+    )
+
+
+def version_ceiling_message(version: str, highest: str) -> str:
+    return (
+        f"v{version} is below {highest}. Bump above it; if that release already "
+        "contains this commit, this version is skipped and nothing is lost."
+    )
+
+
 def checks(root: Path) -> int:
     versions, errors = working_versions(root)
     version = versions[0]
@@ -137,20 +160,9 @@ def checks(root: Path) -> int:
     tags = git(root, "tag", "--list").splitlines()
     if plain and f"v{version}" not in tags:
         assert version is not None
-        numbers = tuple(map(int, version.split(".")))
-        higher = [
-            tag
-            for tag in tags
-            if tag.startswith("v")
-            and SEMVER.fullmatch(tag[1:])
-            and tuple(map(int, tag[1:].split("."))) > numbers
-        ]
-        if higher:
-            highest = max(higher, key=lambda tag: tuple(map(int, tag[1:].split("."))))
-            errors.append(
-                f"v{version} is below {highest}. Bump above it; if that release already "
-                "contains this commit, this version is skipped and nothing is lost."
-            )
+        highest = higher_tag(version, tags)
+        if highest:
+            errors.append(version_ceiling_message(version, highest))
     if errors:
         for message in errors:
             error(message)
@@ -196,14 +208,28 @@ def remote_state(root: Path, tag: str) -> RemoteState:
         fetch.append(f"{tag_ref}:{tag_ref}")
     git(root, *fetch)
     releases_text = command(
-        ["gh", "release", "list", "--limit", "100", "--json", "tagName,isDraft"], root
+        [
+            "gh",
+            "api",
+            "repos/{owner}/{repo}/releases?per_page=100",
+            "--paginate",
+            "--slurp",
+        ],
+        root,
     )
     try:
-        releases = json.loads(releases_text)
-        if not isinstance(releases, list) or any(
+        pages = json.loads(releases_text)
+        if (
+            not isinstance(pages, list)
+            or not pages
+            or any(not isinstance(page, list) for page in pages)
+        ):
+            raise ValueError("invalid release pages")
+        releases = [entry for page in pages for entry in page]
+        if any(
             not isinstance(entry, dict)
-            or not isinstance(entry.get("tagName"), str)
-            or not isinstance(entry.get("isDraft"), bool)
+            or not isinstance(entry.get("tag_name"), str)
+            or not isinstance(entry.get("draft"), bool)
             for entry in releases
         ):
             raise ValueError("invalid release listing")
@@ -213,8 +239,8 @@ def remote_state(root: Path, tag: str) -> RemoteState:
         ) from exc
     release = "absent"
     for entry in releases:
-        if entry["tagName"] == tag:
-            release = "draft" if entry["isDraft"] else "published"
+        if entry["tag_name"] == tag:
+            release = "draft" if entry["draft"] else "published"
             break
     return RemoteState(
         refs.get(f"{tag_ref}^{{}}", refs.get(tag_ref)),
@@ -317,6 +343,16 @@ def publish(root: Path) -> int:
             )
     # All state rows have been validated before the first write.
     if state.tag is None:
+        live_tags = []
+        for line in git(root, "ls-remote", "--tags", "origin").splitlines():
+            fields = line.split()
+            if len(fields) != 2 or not SHA.fullmatch(fields[0]):
+                raise Refusal("Remote tags are unreadable. Repair origin and retry.")
+            if fields[1].startswith("refs/tags/"):
+                live_tags.append(fields[1].removeprefix("refs/tags/"))
+        highest = higher_tag(version, live_tags)
+        if tag not in live_tags and highest:
+            raise Refusal(version_ceiling_message(version, highest))
         git(root, "tag", "-a", tag, "-m", f"LaunchPad {tag}", sha)
         git(root, "push", "origin", f"refs/tags/{tag}")
     if state.release == "absent":
@@ -360,16 +396,24 @@ def pr_guard(root: Path) -> int:
         raise Refusal(
             "Base manifest is unreadable. Restore its version and retry."
         ) from exc
+    existing_version = False
     if versions[0] != previous:
         print("Version changed: running all release checks.")
-        return checks(root)
+        result = checks(root)
+        if result:
+            return result
+        existing_version = f"v{versions[0]}" in git(root, "tag", "--list").splitlines()
+        if not existing_version:
+            return 0
     changed = git(
         root, "diff", "--no-renames", "--name-only", "-z", f"{base}...HEAD"
     ).split("\0")
     shipped = [
         path
         for path in changed
-        if path.startswith(SHIPPED_PREFIX) and not path.startswith(SHIPPED_EXCLUDE)
+        if path.startswith(SHIPPED_PREFIX)
+        and not path.startswith(SHIPPED_EXCLUDE)
+        and not (existing_version and path in MANIFESTS)
     ]
     try:
         labels = json.loads(os.environ.get("PR_LABELS", "[]"))

@@ -38,6 +38,6 @@ jobs:
 
       - name: Check release intent
         env:
-          LP_BASE_REF: origin/${{ github.base_ref }}
+          LP_BASE_REF: ${{ github.event.pull_request.base.sha }}
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: python plugins/launchpad/scripts/plugin-release-lane.py pr-guard

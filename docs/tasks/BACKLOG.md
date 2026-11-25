@@ -4782,3 +4782,33 @@ Compare `canonical_stack_ids(persisted)` with `canonical_stack_ids(detected)`, o
 **Notes**
 
 The mismatch was cosmetic before v2.3.1 and stays so; v2.3.1 made the canonical form available through `lp_pick_stack/stack_aliases.py`. Follow-up to v2.3.1 (PR #238).
+
+---
+
+#### BL-403 - Align manual recovery with the release lane checks
+
+- **Priority**: P2
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `.github/workflows/v2-release.yml`, `docs/architecture/SCAFFOLD_OPERATIONS.md` section 7 and `docs/architecture/SCAFFOLD_HANDSHAKE.md`
+- **Scenario**: PR #248 review of the automatic release lane and its manual recovery path.
+
+**Current Behavior**
+
+The manual recovery workflow runs older checks than the lane. Since `release-notes-check.yml` was removed, it has no notes-heading check, and its version check reads only the Claude manifest.
+
+**Desired Behavior**
+
+Manual recovery runs `plugin-release-lane.py checks` before promoting `stable`, covering both manifests and the release notes heading. `SCAFFOLD_OPERATIONS.md` section 7 and `SCAFFOLD_HANDSHAKE.md` describe those same checks.
+
+**Proposed Fix**
+
+Add the shared `checks` invocation to `v2-release.yml` before stable promotion and update both contract documents together. Keep the workflow unchanged until this follow-up is approved.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.

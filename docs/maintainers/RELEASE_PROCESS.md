@@ -109,7 +109,7 @@ Freshness remains advisory on ordinary PRs. It blocks version-bump PRs even when
 
 ### 3. Open the PR and pass the release checks
 
-`version-guard` runs on every PR to `main`, including label changes. Both manifests must agree. When the Claude manifest version differs from the PR base, the guard runs the release checks: plain semver, matching manifests, notes with a heading, a version higher than existing plain-semver tags when its tag is absent, then version coherence, leakage and both freshness checks. An existing version tag skips the higher-version check so recovery and reverting a failed bump remain possible.
+`version-guard` runs on every PR to `main`, including label changes. Both manifests must agree. When the Claude manifest version differs from the PR base, the guard runs the release checks: plain semver, matching manifests, notes with a heading, a version higher than existing plain-semver tags when its tag is absent, then version coherence, leakage and both freshness checks. An existing version tag skips the higher-version check so recovery and reverting a failed bump remain possible. When the version changes to an existing tag, the guard also requires `no-release` for shipped-file changes other than the two manifests; reverting only the manifests or changing only excluded test-folder files passes without the label.
 
 ### 4. Review and complete the manual Codex checks
 
@@ -157,6 +157,8 @@ A PR that changes shipped files under `plugins/launchpad/` without changing the 
 The label defers shipped changes to the next release; it does not approve the change. Review and other required checks still apply. A version bump always runs release checks regardless of the label. Both manifests must agree in every case.
 
 A fix merged after a failed release carries `no-release` when it keeps the version unchanged. Its merge starts another run that completes the pending release once its checks and state permit it.
+
+A pending release ships the commit its retry selects, so a change merged with `no-release` after the failed run ships in it too. Update the release notes first when such a change belongs in them.
 
 ## Failure and retry
 
