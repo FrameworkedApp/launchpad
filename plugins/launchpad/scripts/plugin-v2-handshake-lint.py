@@ -233,6 +233,9 @@ LINT_RAW_SUBPROCESS_ALLOWLIST = frozenset(
         # pin-rotation validation). Migration to safe_run alongside the
         # v2.x sweep tracked in BL-308.
         "plugins/launchpad/scripts/plugin-upstream-pin-walk-scope-parity.py",
+        # CI release lane: fixed argv and bounded timeouts for git and gh.
+        # safe_run strips GH_TOKEN and rejects peeled commit expressions.
+        "plugins/launchpad/scripts/plugin-release-lane.py",
         # v2.1.7 BL-364: external-infrastructure preflight engine. Calls
         # fixed-argv `dig` (DNS probes) and `gh secret list` (GitHub
         # Secrets probe) plus `git status --porcelain` (uncommitted-
