@@ -416,7 +416,7 @@ def test_shipped_path_quoting(lane, name):
     assert lane.calls("lint") == []
 
 
-@pytest.mark.parametrize("name", ["release"])
+@pytest.mark.parametrize("name", ["release", "version-guard"])
 def test_w1_workflow_permissions(name):
     import yaml
 
@@ -425,7 +425,7 @@ def test_w1_workflow_permissions(name):
     assert workflow["permissions"] == {}
 
 
-@pytest.mark.parametrize("name", ["release"])
+@pytest.mark.parametrize("name", ["release", "version-guard"])
 def test_w2_workflow_write_permissions(name):
     import yaml
 
@@ -438,7 +438,7 @@ def test_w2_workflow_write_permissions(name):
                 assert (job_name, resource) in {("publish", "contents"), ("report", "issues")}
 
 
-@pytest.mark.parametrize("name", ["release"])
+@pytest.mark.parametrize("name", ["release", "version-guard"])
 def test_w3_no_expressions_in_run(name):
     import yaml
 

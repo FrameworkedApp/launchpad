@@ -3,10 +3,10 @@ name: Anchor freshness watch
 # Early-warning lane for the OPERATIONS §4 freshness contract.
 #
 # WHY THIS EXISTS. The 30-day `last_validated:` window is enforced at two
-# points only: advisory on PRs (so a lapsed window never blocks an unrelated
-# change, per v2.1.10 / PR #104) and HARD at release time by v2-release.yml
-# steps 5 + 6. That leaves a gap: nothing tells you the window is about to
-# lapse. You find out when you try to tag, which is the worst possible moment
+# points: advisory on ordinary PRs (so a lapsed window never blocks an unrelated
+# change, per v2.1.10 / PR #104) and HARD in the release checks for version-bump
+# PRs and releases. That leaves a gap: nothing tells you the window is about to
+# lapse. You find out when you try to release, which is the worst possible moment
 # because the fix is a real re-validation pass, not a date bump. v2.1.11 hit
 # exactly this: 16 docs at 38-39 days, discovered while cutting the release.
 #
@@ -189,7 +189,7 @@ jobs:
             echo
             echo "The docs below are older than ${WARN_WINDOW} days, so they breach the"
             echo "30-day OPERATIONS §4 window within roughly ${LEAD_DAYS} days. Once that"
-            echo "happens, \`v2-release.yml\` steps 5 and 6 hard-fail and **no tag can ship**"
+            echo "happens, the release checks hard-fail and **no release can ship**"
             echo "until they are re-validated."
             echo
             echo '```'

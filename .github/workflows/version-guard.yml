@@ -1,0 +1,43 @@
+name: version-guard
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions: {}
+
+concurrency:
+  group: version-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  version-guard:
+    name: version-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Install vendored deps
+        run: |
+          PSUTIL_PIN=$(cat plugins/launchpad/scripts/_vendor/PSUTIL_VERSION)
+          PYYAML_PIN=$(cat plugins/launchpad/scripts/_vendor/PYYAML_VERSION)
+          python -m pip install --upgrade pip
+          python -m pip install "psutil==${PSUTIL_PIN}" "pyyaml==${PYYAML_PIN}"
+
+      - name: Check release intent
+        env:
+          LP_BASE_REF: origin/${{ github.base_ref }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: python plugins/launchpad/scripts/plugin-release-lane.py pr-guard

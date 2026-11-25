@@ -95,6 +95,5 @@
 /plugins/launchpad/scripts/plugin_stack_adapters/polyglot_path_rewriter.py @foadshafighi
 /plugins/launchpad/scripts/plugin_stack_adapters/secret_scanner.py         @foadshafighi
 /plugins/launchpad/scripts/lp_define_runner.py                             @foadshafighi
-/.github/workflows/release-notes-check.yml                                 @foadshafighi
 /.launchpad/secret-patterns.txt                                            @foadshafighi
 /docs/maintainers/decommission-history.md                                  @foadshafighi
