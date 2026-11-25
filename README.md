@@ -196,7 +196,7 @@ LaunchPad is MIT-licensed and open-source. Every claim above maps to a file you 
 | 43 commands, 39 agents, 16 skills    | Browse `plugins/launchpad/commands/`, `plugins/launchpad/agents/`, `plugins/launchpad/skills/`.                                                                                                                             |
 | Multi-agent review dispatch          | Read `.launchpad/agents.yml` and the 16 review agents in `plugins/launchpad/agents/review/`. Dispatch logic is in the `/lp-review` command file.                                                                            |
 | 0.60 confidence threshold + P1 floor | Specified in the `/lp-review` command file and enforced in code. Suppression audit trail at `.harness/observations/`.                                                                                                       |
-| Stack-aware dispatch                 | `stack_scope:` frontmatter on every agent file. Test coverage: `test_define` + `test_pipeline_matrix`, part of the Python suite (more than 2,500 tests passing at v2.4.0).                                                  |
+| Stack-aware dispatch                 | `stack_scope:` frontmatter on every agent file. Test coverage: `test_define` + `test_pipeline_matrix`, part of the Python suite (more than 2,500 tests passing at v2.4.1).                                                  |
 | Content-hash audit log               | Open `.launchpad/audit.log` and read an entry. Schema: ISO timestamp, git user, commit SHA, command, content hash.                                                                                                          |
 | Integrity guard refusal              | Code-level check in `/lp-build`. Regression test arms the hostile-PR pattern and asserts the refusal.                                                                                                                       |
 | Three-layer merge prevention         | Layer 1: refusal strings in `plugins/launchpad/commands/lp-ship.md` and `plugins/launchpad/commands/lp-commit.md`. Layer 2: PreToolUse hook. Layer 3: GitHub branch protection rules. All three visible in the public repo. |
@@ -249,7 +249,7 @@ LaunchPad/
 │   └── marketplace.json        # name=launchpad
 ├── plugins/launchpad/          # the plugin itself
 │   ├── .claude-plugin/
-│   │   └── plugin.json         # name=launchpad, version=2.4.0
+│   │   └── plugin.json         # name=launchpad, version=2.4.1
 │   ├── .codex-plugin/
 │   │   └── plugin.json         # Codex package manifest
 │   ├── commands/               # /lp-* slash commands
@@ -361,7 +361,7 @@ Cost: about 30 minutes of install plus the first `/lp-define`. Plugin is MIT and
 - [How It Works](docs/guides/HOW_IT_WORKS.md): day-to-day operator's manual
 - [Methodology](docs/guides/METHODOLOGY.md): architecture, design principles, credits
 - [Repository structure](docs/architecture/REPOSITORY_STRUCTURE.md): file-placement decision tree
-- [Release notes](docs/releases/v2.4.0.md)
+- [Release notes](docs/releases/v2.4.1.md)
 - [Contributing](CONTRIBUTING.md)
 
 ---

@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Tracked in [ROADMAP.md](ROADMAP.md). v2.1.x candidates carrying forward from v2.2.0: BL-365 (parallelize preflight probe dispatch + short-TTL cache), BL-367 (programmatic GitHub-repo linkage verification for provider project probes), BL-368 (DNS `dig +short --` sentinel bug), and BL-366 (18-item preflight polish). The v2.2 series lands the 15 operational/security infrastructure surfaces deferred from v2.0, plus BL-374 (TypeScript 5.x -> 6.x upgrade audit, seeded by v2.1.9), BL-375 (Prisma 6.x -> 7.x upgrade audit, seeded by v2.1.10), BL-377 through BL-385 (CI gate correctness, freshness-contract enforcement, lint parity, and scaffolder catalog follow-ups), BL-386 through BL-395 (Codex follow-ups), plus the 10 deferred stacks. See `docs/tasks/BACKLOG.md` for full scope.
 
+## [v2.4.1]
+
+### Internal
+
+- Releases are now cut automatically when a version-bump PR merges. The release workflow runs the checks, creates the tag and GitHub release, and fast-forwards `stable`. The required `version-guard` check runs release checks before merge and requires `no-release` for shipped changes deferred to the next release. Nothing changes for users. BL-246 is superseded.
+
 ## [v2.4.0]
 
 The marketplace is renamed from `builtform` to `frameworked`, so new installs use `launchpad@frameworked`.
