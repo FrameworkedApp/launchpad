@@ -40,6 +40,9 @@ class LaneRepo:
             "if args and (args[0] == 'push' or (args[0] == 'tag' and '--list' not in args)):\n"
             "    with open(os.environ['LANE_CALLS'], 'a') as log:\n"
             "        log.write(json.dumps(['git-write', *args]) + '\\n')\n"
+            "if args[:2] == ['ls-remote', 'origin'] and 'LS_REMOTE_OUTPUT' in os.environ:\n"
+            "    print(os.environ['LS_REMOTE_OUTPUT'])\n"
+            "    sys.exit(0)\n"
             f"os.execv({real_git!r}, [{real_git!r}, *args])\n")
         git_stub.chmod(0o755)
         self.env = {
@@ -78,6 +81,14 @@ if args[:2] == ["release", "list"]:
         sys.exit(1)
     print(state.read_text())
 elif args[:2] == ["release", "create"]:
+    if os.environ.get("CREATE_TIMES"):
+        with open(os.environ["CREATE_TIMES"], "a") as times:
+            times.write(json.dumps(__import__("time").monotonic()) + "\\n")
+    if os.environ.get("CREATE_FAILURES"):
+        calls = [json.loads(line) for line in Path(os.environ["LANE_CALLS"]).read_text().splitlines()]
+        attempts = sum(call[:3] == ["gh", "release", "create"] for call in calls)
+        if attempts <= int(os.environ["CREATE_FAILURES"]):
+            sys.exit(1)
     entries = json.loads(state.read_text())
     entries.append({"tagName": args[2], "isDraft": False})
     state.write_text(json.dumps(entries))
@@ -511,3 +522,54 @@ with open(os.environ["REPORT_CALLS"], "a") as log:
         assert write["args"][write["args"].index("--title") + 1] == title
     assert write["body"] == (f"Run: https://example.invalid/run/1\nCommit: {sha}\n"
                               "verify: failure\npublish: skipped\n")
+
+
+@pytest.mark.parametrize("failures,attempts,code", [(1, 2, 0), (99, 3, 1)])
+def test_release_creation_retry_and_exhaustion(lane, failures, attempts, code):
+    lane.stable(lane.initial)
+    sha = lane.advance()
+    times_file = lane.root / "creation-times.jsonl"
+    writes_before = len(lane.calls("git-write"))
+    lane.run("publish", code, CREATE_FAILURES=str(failures), CREATE_TIMES=str(times_file))
+    assert len(lane.creates()) == attempts
+    times = [json.loads(line) for line in times_file.read_text().splitlines()]
+    assert len(times) == attempts
+    assert all(later - earlier >= 10 for earlier, later in zip(times, times[1:]))
+    assert lane.git("ls-remote", "origin", "refs/tags/v2.5.0^{}").split()[0] == sha
+    assert lane.git("cat-file", "-t", "v2.5.0") == "tag"
+    stable = lane.git("ls-remote", "origin", "refs/heads/stable").split()[0]
+    writes = lane.calls("git-write")[writes_before:]
+    if code:
+        assert stable == lane.initial
+        assert json.loads(lane.state_file.read_text()) == []
+        assert [call[1] for call in writes] == ["tag", "push"]
+    else:
+        assert stable == sha
+        assert json.loads(lane.state_file.read_text()) == [{"tagName": "v2.5.0", "isDraft": False}]
+        assert [call[1] for call in writes] == ["tag", "push", "push"]
+
+
+@pytest.mark.parametrize("command", ["plan", "publish"])
+@pytest.mark.parametrize("response,reason", [
+    ("not-a-sha\trefs/heads/main\n", "Remote refs are unreadable"),
+    ("", "origin/main is missing"),
+])
+def test_malformed_remote_ref_success_refuses_without_writes(lane, command, response, reason):
+    output = lane.unchanged(command, 1, LS_REMOTE_OUTPUT=response)
+    assert reason in output
+    assert lane.calls("gh") == []
+
+
+@pytest.mark.parametrize("command", ["plan", "publish"])
+@pytest.mark.parametrize("response", [
+    "not JSON",
+    "{}",
+    "[null]",
+    '[{"tagName":null,"isDraft":false}]',
+    '[{"tagName":"v2.5.0","isDraft":"false"}]',
+])
+def test_malformed_release_list_success_refuses_without_writes(lane, command, response):
+    lane.state_file.write_text(response)
+    output = lane.unchanged(command, 1)
+    assert "Release list is unreadable" in output
+    assert lane.calls("gh") == [["gh", "release", "list", "--limit", "100", "--json", "tagName,isDraft"]]
