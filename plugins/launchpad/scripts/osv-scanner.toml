@@ -134,12 +134,14 @@ up to 4 KB (255-byte names, near-miss suffixes, 2000-deep directories) match all
 12 expanded patterns in under 4 ms with wcmatch 8.5.2, while the advisory's own
 `*_*_*_*_*.csv` shape takes 1.3 s on a 120-byte name. While this entry exists,
 tests/test_osv_wcmatch_exposure.py fails if a rule pattern gains several `*` in
-one segment, if a .semgrepignore or a semgrep --include/--exclude flag appears,
-or if hostile paths become slow to match (each pattern is probed in a
-subprocess with a hard deadline). v2-handshake-lint runs it before the semgrep
-steps on pull requests targeting main or feat/v2-greenfield-pipeline (the
-workflow's branch filter; the full test suite also runs it there and in the
-pre-push hook), and it is the reproducible form of the timing probe (semgrep's
+one segment, if a .semgrepignore appears, if a semgrep invocation in
+lefthook.yml or the workflows passes --include/--exclude or loads a --config
+outside plugins/launchpad/.semgrep/, or if hostile paths become slow to match
+(each pattern is probed in a subprocess with a hard deadline). v2-handshake-lint
+runs it before the semgrep steps on pull requests targeting main or
+feat/v2-greenfield-pipeline (the workflow's branch filter), and the full suite
+runs it again there; the local pre-push pytest hook runs it only when Python
+files change. It is also the reproducible form of the timing probe (semgrep's
 own pattern preprocessing and flags). A PR that edits
 the rules, the test and the workflow together can still slow only its own CI
 job, which `timeout 120` bounds and which runs with a read-only token. No
