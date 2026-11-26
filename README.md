@@ -147,6 +147,10 @@ Multiple specialist review agents run in parallel against every diff. Findings c
 
 Nine criteria that matter when picking a coding harness. Each row is an actual competing tool, evaluated honestly against each criterion. **LaunchPad is the only row that ships all nine.** Most peers ship 1 to 3 of them. Compound Engineering (the closest peer) ships 3 Yes plus 1 Partial. AWS Kiro ships 2 Yes plus 2 Partial on the safety axis. Both are credited here, not erased.
 
+<p align="center">
+  <img src=".github/assets/comparison-matrix.png" width="520" alt="Criteria matrix: LaunchPad meets all nine criteria; Compound Engineering Plugin and Superpowers with BMAD-METHOD meet 3, AWS Kiro 2 plus 2 partial, and the rest 1 or 2. The full table follows.">
+</p>
+
 | Approach                                        | Greenfield scaffolding | Brownfield retrofit | Governance kernel | Stack adapter | Multi-agent review | P1 floor + audit | Compound learning | Merge refusal | Open source |
 | ----------------------------------------------- | ---------------------- | ------------------- | ----------------- | ------------- | ------------------ | ---------------- | ----------------- | ------------- | ----------- |
 | Compound Engineering Plugin (Every)             | No                     | No                  | No                | No            | Yes                | Partial          | Yes               | No            | Yes         |
