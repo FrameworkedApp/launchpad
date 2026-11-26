@@ -8,7 +8,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)
 
-![LaunchPad Architectural Outline](.github/assets/hero-image.png)
+![LaunchPad architectural sketch of an agentic coding workflow](.github/assets/hero-image.jpg)
 
 ---
 
