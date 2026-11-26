@@ -1334,6 +1334,8 @@ These are the polish/hardening items the agent surfaced; ruff itself catches a s
 
 #### BL-246 - v2.2: `/lp-release [version]` command — automate the manual ship ceremony
 
+**Status (2026-11-25)**: SUPERSEDED. Releases are cut by the `release` workflow when a version-bump PR merges (tag, GitHub release and `stable` in one run), so the `/lp-release` command will not be built.
+
 **Status (2026-05-07)**: RE-TARGETED v2.1 → v2.1.1. v2.1.0 ship is using the manual runbook (tag → push → wait for verify-v2-ship → `gh release create`) inherited from v2.0.0. Automating into a `/lp-release` command was scoped for v2.1 but slipped through the architecture-doc → master-plan handoff. Manual ceremony is sound for v2.1.0; automation lands in v2.1.1.
 
 **Driver**: v2.0.0 ship was a manual 3-step ceremony (tag → push → wait for `verify-v2-ship` → `gh release create --notes-file`). Documented as a runbook in v2.0.1 (BL-241 §6); v2.1 promotes the runbook to an executable command so LaunchPad and growth-toolkit (and any downstream LaunchPad-managed plugin/CLI/library/spec project) ship versioned releases with a single command instead of running the runbook by hand each time.
@@ -4780,3 +4782,63 @@ Compare `canonical_stack_ids(persisted)` with `canonical_stack_ids(detected)`, o
 **Notes**
 
 The mismatch was cosmetic before v2.3.1 and stays so; v2.3.1 made the canonical form available through `lp_pick_stack/stack_aliases.py`. Follow-up to v2.3.1 (PR #238).
+
+---
+
+#### BL-403 - Align manual recovery with the release lane checks
+
+- **Priority**: P2
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `.github/workflows/v2-release.yml`, `docs/architecture/SCAFFOLD_OPERATIONS.md` section 7 and `docs/architecture/SCAFFOLD_HANDSHAKE.md`
+- **Scenario**: PR #248 review of the automatic release lane and its manual recovery path.
+
+**Current Behavior**
+
+The manual recovery workflow runs older checks than the lane. Since `release-notes-check.yml` was removed, it has no notes-heading check, and its version check reads only the Claude manifest.
+
+**Desired Behavior**
+
+Manual recovery runs `plugin-release-lane.py checks` before promoting `stable`, covering both manifests and the release notes heading. `SCAFFOLD_OPERATIONS.md` section 7 and `SCAFFOLD_HANDSHAKE.md` describe those same checks.
+
+**Proposed Fix**
+
+Add the shared `checks` invocation to `v2-release.yml` before stable promotion and update both contract documents together. Keep the workflow unchanged until this follow-up is approved.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.
+
+---
+
+#### BL-404 - Refresh release freshness on publish retries and permit manifest-only reverts
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `.github/workflows/release.yml`, `plugins/launchpad/scripts/plugin-release-lane.py`
+- **Scenario**: PR #248 review of release retries and reverting a failed version bump.
+
+**Current Behavior**
+
+Re-running only a failed `publish` job reuses that run's earlier `verify` result. Freshness is not checked again if its 30-day window lapses between attempts. A manifest-only revert to an already published version still runs every release check, so stale freshness dates can block the revert.
+
+**Desired Behavior**
+
+Publication checks freshness before its first write on every attempt. A manifest-only revert to a published tag can pass the PR guard without release checks that could block recovery on stale freshness dates.
+
+**Proposed Fix**
+
+Re-run the freshness gate in `publish` before its first write, and let `pr-guard` skip the release checks for a manifest-only revert to a published tag.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.

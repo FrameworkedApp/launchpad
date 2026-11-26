@@ -1,0 +1,147 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  queue: max
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      sha: ${{ steps.plan.outputs.sha }}
+      done: ${{ steps.plan.outputs.done }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Preserve the lane script from this push
+        run: cp plugins/launchpad/scripts/plugin-release-lane.py "$RUNNER_TEMP/plugin-release-lane.py"
+
+      - name: Resolve the release commit
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python "$RUNNER_TEMP/plugin-release-lane.py" plan
+
+      - name: Select the release commit
+        if: steps.plan.outputs.done != 'true'
+        env:
+          RELEASE_SHA: ${{ steps.plan.outputs.sha }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          if [ "$RELEASE_SHA" != "$EVENT_SHA" ]; then
+            git checkout --detach "$RELEASE_SHA"
+          fi
+
+      - name: Install vendored deps
+        if: steps.plan.outputs.done != 'true'
+        run: |
+          PSUTIL_PIN=$(cat plugins/launchpad/scripts/_vendor/PSUTIL_VERSION)
+          PYYAML_PIN=$(cat plugins/launchpad/scripts/_vendor/PYYAML_VERSION)
+          python -m pip install --upgrade pip
+          python -m pip install "psutil==${PSUTIL_PIN}" "pyyaml==${PYYAML_PIN}"
+
+      - name: Check the release commit
+        if: steps.plan.outputs.done != 'true'
+        run: python "$RUNNER_TEMP/plugin-release-lane.py" checks
+
+  publish:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && needs.verify.outputs.done != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Preserve the lane script and select the release commit
+        env:
+          RELEASE_SHA: ${{ needs.verify.outputs.sha }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          cp plugins/launchpad/scripts/plugin-release-lane.py "$RUNNER_TEMP/plugin-release-lane.py"
+          if [ "$RELEASE_SHA" != "$EVENT_SHA" ]; then
+            git checkout --detach "$RELEASE_SHA"
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Complete the release
+        env:
+          RELEASE_SHA: ${{ needs.verify.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 "$RUNNER_TEMP/plugin-release-lane.py" publish
+
+  report:
+    needs: [verify, publish]
+    if: github.ref == 'refs/heads/main' && failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Open or update the release failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ needs.verify.outputs.sha }}
+          EVENT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: |
+          set -euo pipefail
+          TITLE=$(python3 - <<'PY'
+          import json
+          import re
+          try:
+              with open('plugins/launchpad/.claude-plugin/plugin.json') as handle:
+                  version = json.load(handle)['version']
+              if not isinstance(version, str) or not re.fullmatch(r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)', version):
+                  raise ValueError('invalid version')
+              print(f'Release v{version} failed')
+          except (OSError, ValueError, KeyError, TypeError):
+              print('Release failed (version unreadable)')
+          PY
+          )
+          BODY_FILE="$RUNNER_TEMP/release-failure-body.md"
+          printf 'Run: %s\nCommit: %s\nRelease commit: %s\nverify: %s\npublish: %s\n' \
+            "$RUN_URL" "$EVENT_SHA" "${RELEASE_SHA:-unresolved}" "$VERIFY_RESULT" "$PUBLISH_RESULT" > "$BODY_FILE"
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --search "${TITLE} in:title" --limit 100 --json number,title \
+            --jq "[.[] | select(.title == \"${TITLE}\")] | .[0].number // empty")
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$REPO" --body-file "$BODY_FILE"
+          else
+            gh issue create --repo "$REPO" --title "$TITLE" --body-file "$BODY_FILE"
+          fi

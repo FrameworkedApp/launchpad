@@ -168,7 +168,7 @@ def test_multi_version_label_is_parsed(tmp_path: Path) -> None:
 def test_pass_with_v_prefixed_changelog_heading(tmp_path: Path) -> None:
     """Regression test (v2.1.1 Slice I): orphan-check tolerates `## [v<version>]`.
 
-    The release-notes-check.yml v2.1 co-ship invariant requires CHANGELOG
+    The retired release-notes-check.yml v2.1 co-ship invariant required CHANGELOG
     headings to use the `v` prefix (`^## (\\[)?v2\\.1\\.[0-9]+(\\])?`).
     The orphan-check regex must accept both `[2.1.1]` (legacy) and
     `[v2.1.1]` (v2.1.1+ canonical) so the slip-prevention gate stays
