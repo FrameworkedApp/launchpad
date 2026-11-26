@@ -4842,3 +4842,63 @@ Re-run the freshness gate in `publish` before its first write, and let `pr-guard
 **Notes**
 
 Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.
+
+---
+
+#### BL-405 - Run the version guard when a PR is retargeted to main
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `.github/workflows/version-guard.yml`
+- **Scenario**: PR #248 review of the required `version-guard` check.
+
+**Current Behavior**
+
+`version-guard` runs on `opened`, `synchronize`, `reopened` and label changes. A PR opened against another branch and then retargeted to `main` emits only `edited`, so the required check never starts and the PR stays blocked until its next push. This fails closed; nothing unchecked can merge.
+
+**Desired Behavior**
+
+Retargeting a PR to `main` starts `version-guard` without a new push.
+
+**Proposed Fix**
+
+Add `edited` to the `pull_request` trigger types, and skip the job when the edit did not change the base branch.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.
+
+---
+
+#### BL-406 - Recheck main's version immediately before the first release write
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `plugins/launchpad/scripts/plugin-release-lane.py`
+- **Scenario**: PR #248 review of the rollback refusal.
+
+**Current Behavior**
+
+`publish` reads `origin/main` once, before the paginated release lookup. If a revert of an untagged version lands on `main` in the seconds between that read and the tag push, the run still tags and publishes the reverted version.
+
+**Desired Behavior**
+
+The rollback refusal uses the version on `main` as it stands immediately before the first remote write.
+
+**Proposed Fix**
+
+Re-read `main`'s Claude manifest version right before creating the tag and apply the same rollback refusal, with a test where the revert lands after the initial fetch.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.

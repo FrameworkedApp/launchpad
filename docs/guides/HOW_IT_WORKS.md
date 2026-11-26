@@ -154,7 +154,7 @@ Every run ends with a short disclosure of which differences below applied to it.
 
 ### What is verified on Codex
 
-As of September 19, 2026, verification has run on a real Codex `0.154.0-alpha.6.2` installation, from its command line in non-interactive `codex exec` sessions.
+As of September 19, 2026, verification has run on a real Codex `0.154.0-alpha.6.2` installation, from its command line in non-interactive `codex exec` sessions. On November 25, 2026, the release install and `help` checks passed for v2.4.1 on Codex `0.169.1`; the other rows below were not rerun.
 
 | Command                     | Result on Codex                                                                                                                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -172,7 +172,7 @@ Last checked September 19, 2026, against Codex `0.154.0-alpha.6.2` and Claude Co
 - **Specialist dispatch.** Specialists run concurrently when Codex allows it and one after another otherwise. The run says which mode it used and names any specialist that failed or timed out. A failed specialist is never counted as a pass.
 - **Compound loop.** The loop can drive Codex by setting `"tool": "codex"` in `scripts/compound/config.json`. It was not tested on Codex, and it runs Codex with approvals and the sandbox bypassed, the same unattended posture as the Claude Code loop.
 - **Surfaces.** The command line was verified in `codex exec` sessions. The desktop app runs the same engine and reads the same plugin configuration, and as of September 20, 2026, LaunchPad installed through the marketplace loads and runs there. The interactive terminal session has not been verified. OpenAI's documentation says the IDE extension does not support plugins.
-- **Entries Codex generates itself.** Codex may list a few small LaunchPad commands as `launchpad:source-command-*`. Codex creates these on its own; they skip the router, so a nested `/lp-` command inside one may not resolve. Use `$launchpad:lp <command>`.
+- **Entries Codex generates itself.** Codex may list a few small LaunchPad commands as `launchpad:source-command-*`. Codex creates these on its own; they skip the router, so a nested `/lp-` command inside one may not resolve. Use `$launchpad:lp <command>`. Codex `0.169.1` created none in the November 25, 2026 check.
 
 ---
 
