@@ -66,6 +66,15 @@ jobs:
         # 4 of 6: bandit at MEDIUM+ matches local lefthook gate.
         run: bandit -r plugins/launchpad/scripts/ -x '_vendor,tests' -ll
 
+      - name: Semgrep path-pattern guard (wcmatch suppression)
+        # Runs before semgrep so a PR that adds a multi-star rule `paths:`
+        # pattern, a .semgrepignore, or a semgrep --include/--exclude flag
+        # fails here with a clear message instead of reaching the wcmatch
+        # matcher behind the GHSA-53pm-wgxf-c6qf suppression in
+        # osv-scanner.toml. Skips itself once that suppression is removed.
+        working-directory: plugins/launchpad/scripts
+        run: python -m pytest -q tests/test_osv_wcmatch_exposure.py
+
       - name: Semgrep general patterns (R1-T1-X exit-code branching)
         # 5 of 6: 8 universal Python static-analysis patterns. Distinguish
         # exit 1 (rule fired) from exit 2+ (tool crashed/timed out).
