@@ -25,6 +25,14 @@
 # 1.185.0 still pins mcp==1.29.0 and opentelemetry-api~=1.37.0, so the fixes
 # (mcp 1.30.0, opentelemetry-api 1.45.1) cannot be installed. When a semgrep
 # release relaxes those pins, re-lock and delete the matching entries.
+#
+# The three entries at the end (GHSA-qx49-fqc8-xw99, GHSA-mf5v-w3w3-f6cg,
+# GHSA-53pm-wgxf-c6qf) were added on 2026-11-26. semgrep 1.186.0 (the current
+# pin), 1.187.0 (the latest release) and semgrep's develop branch all declare
+# mcp==1.29.0, opentelemetry-api~=1.37.0 and wcmatch~=8.3, and the advisories
+# carry no fixes on those release lines, so no re-lock can reach the fixed
+# versions. Same lifecycle: delete each entry once a semgrep release relaxes
+# the matching pin.
 
 [[IgnoredVulns]]
 id = "GHSA-5h93-6whr-6q8j"
@@ -77,4 +85,42 @@ header with quadratic cost. Fixed in opentelemetry-api 1.45.1. Unreachable:
 semgrep 1.185.0 pins opentelemetry-api~=1.37.0. Not exploitable here: semgrep
 runs as a local CLI with --metrics=off and receives no inbound HTTP requests or
 trace headers, and no first-party code imports opentelemetry.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-qx49-fqc8-xw99"
+ignoreUntil = 2027-01-31
+reason = """
+MCP Python SDK: the OAuth client (mcp.client.auth) lets the MCP server it
+connects to choose where the client's OAuth credentials are sent. Fixed in mcp
+1.30.0. Unreachable: semgrep 1.186.0 and 1.187.0 hard-pin mcp==1.29.0. Not
+exploitable here: semgrep imports only the MCP server modules (for `semgrep
+mcp`, which LaunchPad never runs), nothing in LaunchPad starts an MCP client or
+uses MCP OAuth, and no first-party code imports mcp.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-mf5v-w3w3-f6cg"
+ignoreUntil = 2027-01-31
+reason = """
+OpenTelemetry Python API: TraceContextTextMapPropagator.extract() parses a
+crafted traceparent value with quadratic-time regex backtracking. Fixed in
+opentelemetry-api 1.45.2. Unreachable: semgrep 1.186.0 and 1.187.0 pin
+opentelemetry-api~=1.37.0. Not exploitable here: semgrep calls extract() only
+on a traceparent it builds from its own SEMGREP_TRACE_PARENT_* environment
+variables, LaunchPad runs semgrep with --metrics=off and passes it no inbound
+headers, and no first-party code imports opentelemetry.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-53pm-wgxf-c6qf"
+ignoreUntil = 2027-01-31
+reason = """
+wcmatch: matching a crafted file name against a pattern with several `*`
+wildcards takes polynomial time with default flags. Fixed in wcmatch 11.2.
+Unreachable: semgrep 1.186.0 and 1.187.0 pin wcmatch~=8.3. Not exploitable in
+any meaningful way here: semgrep uses wcmatch only to filter target paths, the
+names come from LaunchPad's own tracked files, and the worst case is a slow
+local lint run (the CI semgrep step is already bounded by `timeout 120`). No
+first-party code imports wcmatch.
 """
