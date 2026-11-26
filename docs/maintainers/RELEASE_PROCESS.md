@@ -47,7 +47,7 @@ codex plugin marketplace remove launchpad --json
 
 The install check passes when the plugin advertises `launchpad:lp` and all three installed-path checks exit zero. The help check passes when the transcript contains the helper's raw inventory JSON, the final message is a readable list, and `diff` exits zero. These checks remain manual; a green workflow does not replace them.
 
-Whenever these checks are rerun, update the "As of" and "Last checked" dates and the Codex version in `README.md` and `docs/guides/HOW_IT_WORKS.md`.
+Whenever these checks are rerun, record the date, the Codex version and the result under "What is verified on Codex" in `docs/guides/HOW_IT_WORKS.md`. Change the other "As of" and "Last checked" dates in `README.md` and `docs/guides/HOW_IT_WORKS.md` only when the claims they date are rechecked; these two checks cover install and `help` only.
 
 ## Why the notes file is required
 
