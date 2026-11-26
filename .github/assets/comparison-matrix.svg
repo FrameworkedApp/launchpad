@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500" width="1200" height="1500" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap');
+      .ground   { fill: #f2efe9; }
+      .ink      { fill: #1a1a1a; }
+      .muted    { fill: #6f6f6f; }
+      .accent   { fill: #1f6feb; }
+      .kicker   { font-weight: 600; font-size: 36px; letter-spacing: 2px; text-transform: uppercase; }
+      .display  { font-family: 'Anton', sans-serif; font-size: 136px; text-transform: uppercase; }
+      .dek      { font-weight: 500; font-size: 32px; }
+      .colhead  { font-weight: 600; font-size: 25px; }
+      .label    { font-weight: 600; font-size: 26px; }
+      .lplabel  { font-weight: 800; font-size: 28px; }
+      .value    { font-weight: 800; font-size: 34px; }
+      .partial  { font-weight: 600; font-size: 25px; }
+      .legend   { font-weight: 500; font-size: 25px; }
+      .caption  { font-weight: 500; font-size: 25px; }
+      .source   { font-weight: 500; font-size: 23px; }
+      .brand    { font-weight: 800; font-size: 25px; letter-spacing: 1px; }
+      .mk-fill  { fill: #1a1a1a; }
+      .mk-ring  { fill: none; stroke: #1a1a1a; stroke-width: 2.5; }
+      .mk-half  { fill: #1a1a1a; }
+      .lp-fill  { fill: #1f6feb; }
+      .lp-band  { fill: #1f6feb; fill-opacity: 0.10; }
+      .hair     { stroke: #cfc9be; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect class="ground" x="0" y="0" width="1200" height="1500"/>
+
+  <!-- TITLE BAND -->
+  <text class="kicker muted" x="72" y="118">AGENTIC CODING HARNESSES</text>
+  <text class="display ink" x="70" y="258">LAUNCHPAD SHIPS</text>
+  <text class="display ink" x="70" y="384">ALL <tspan class="accent">NINE</tspan></text>
+  <text class="dek muted" x="72" y="440">Nine criteria for a coding harness, and which tools meet them</text>
+
+  <!-- LEGEND (right of ALL NINE) -->
+  <g>
+    <circle class="mk-fill" cx="700" cy="366" r="14"/>
+    <text class="legend ink" x="722" y="375">Yes</text>
+    <path class="mk-half" d="M820 352 A14 14 0 0 0 820 380 Z"/><circle class="mk-ring" cx="820" cy="366" r="14"/>
+    <text class="legend ink" x="842" y="375">Partial</text>
+    <circle class="mk-ring" cx="980" cy="366" r="14"/>
+    <text class="legend ink" x="1002" y="375">No</text>
+  </g>
+
+  <!-- COLUMN HEADERS (angled 45 degrees, start at column centre) -->
+  <g class="colhead ink">
+    <text x="404" y="736" transform="rotate(-45 404 736)">Greenfield scaffolding</text>
+    <text x="466" y="736" transform="rotate(-45 466 736)">Brownfield retrofit</text>
+    <text x="528" y="736" transform="rotate(-45 528 736)">Governance kernel</text>
+    <text x="590" y="736" transform="rotate(-45 590 736)">Stack adapter</text>
+    <text x="652" y="736" transform="rotate(-45 652 736)">Multi-agent review</text>
+    <text x="714" y="736" transform="rotate(-45 714 736)">P1 floor + audit</text>
+    <text x="776" y="736" transform="rotate(-45 776 736)">Compound learning</text>
+    <text x="838" y="736" transform="rotate(-45 838 736)">Merge refusal</text>
+    <text x="900" y="736" transform="rotate(-45 900 736)">Open source</text>
+  </g>
+  <text class="caption muted" x="72" y="712">Criteria met out of 9,</text>
+  <text class="caption muted" x="72" y="744">v2.4.0</text>
+
+  <!-- ROW HAIRLINES -->
+  <g class="hair">
+    <line x1="72" y1="828" x2="1128" y2="828"/>
+    <line x1="72" y1="896" x2="1128" y2="896"/>
+    <line x1="72" y1="964" x2="1128" y2="964"/>
+    <line x1="72" y1="1032" x2="1128" y2="1032"/>
+    <line x1="72" y1="1100" x2="1128" y2="1100"/>
+    <line x1="72" y1="1168" x2="1128" y2="1168"/>
+    <line x1="72" y1="1236" x2="1128" y2="1236"/>
+    <line x1="72" y1="1304" x2="1128" y2="1304"/>
+  </g>
+
+  <!-- ROW 1: LaunchPad 9 yes -->
+  <rect class="lp-band" x="60" y="760" width="1080" height="68" rx="6"/>
+  <text class="lplabel accent" x="72" y="804">LaunchPad</text>
+  <circle class="lp-fill" cx="410" cy="794" r="16"/>
+  <circle class="lp-fill" cx="472" cy="794" r="16"/>
+  <circle class="lp-fill" cx="534" cy="794" r="16"/>
+  <circle class="lp-fill" cx="596" cy="794" r="16"/>
+  <circle class="lp-fill" cx="658" cy="794" r="16"/>
+  <circle class="lp-fill" cx="720" cy="794" r="16"/>
+  <circle class="lp-fill" cx="782" cy="794" r="16"/>
+  <circle class="lp-fill" cx="844" cy="794" r="16"/>
+  <circle class="lp-fill" cx="906" cy="794" r="16"/>
+  <text class="value accent" x="960" y="806">9 of 9</text>
+
+  <!-- ROW 2: Compound Engineering Plugin (Every) 3 yes, 1 partial -->
+  <text class="label ink" x="72" y="856">Compound Engineering</text>
+  <text class="label ink" x="72" y="884">Plugin (Every)</text>
+  <circle class="mk-ring" cx="410" cy="862" r="16"/>
+  <circle class="mk-ring" cx="472" cy="862" r="16"/>
+  <circle class="mk-ring" cx="534" cy="862" r="16"/>
+  <circle class="mk-ring" cx="596" cy="862" r="16"/>
+  <circle class="mk-fill" cx="658" cy="862" r="16"/>
+  <path class="mk-half" d="M720 846 A16 16 0 0 0 720 878 Z"/><circle class="mk-ring" cx="720" cy="862" r="16"/>
+  <circle class="mk-fill" cx="782" cy="862" r="16"/>
+  <circle class="mk-ring" cx="844" cy="862" r="16"/>
+  <circle class="mk-fill" cx="906" cy="862" r="16"/>
+  <text class="value ink" x="960" y="858">3 of 9</text>
+  <text class="partial muted" x="960" y="888">+ 1 partial</text>
+
+  <!-- ROW 3: Superpowers, BMAD-METHOD 3 yes -->
+  <text class="label ink" x="72" y="924">Superpowers,</text>
+  <text class="label ink" x="72" y="952">BMAD-METHOD</text>
+  <circle class="mk-ring" cx="410" cy="930" r="16"/>
+  <circle class="mk-ring" cx="472" cy="930" r="16"/>
+  <circle class="mk-ring" cx="534" cy="930" r="16"/>
+  <circle class="mk-ring" cx="596" cy="930" r="16"/>
+  <circle class="mk-fill" cx="658" cy="930" r="16"/>
+  <circle class="mk-ring" cx="720" cy="930" r="16"/>
+  <circle class="mk-fill" cx="782" cy="930" r="16"/>
+  <circle class="mk-ring" cx="844" cy="930" r="16"/>
+  <circle class="mk-fill" cx="906" cy="930" r="16"/>
+  <text class="value ink" x="960" y="942">3 of 9</text>
+
+  <!-- ROW 4: AWS Kiro 2 yes, 2 partial -->
+  <text class="label ink" x="72" y="1007">AWS Kiro</text>
+  <circle class="mk-fill" cx="410" cy="998" r="16"/>
+  <circle class="mk-ring" cx="472" cy="998" r="16"/>
+  <path class="mk-half" d="M534 982 A16 16 0 0 0 534 1014 Z"/><circle class="mk-ring" cx="534" cy="998" r="16"/>
+  <circle class="mk-ring" cx="596" cy="998" r="16"/>
+  <circle class="mk-fill" cx="658" cy="998" r="16"/>
+  <circle class="mk-ring" cx="720" cy="998" r="16"/>
+  <circle class="mk-ring" cx="782" cy="998" r="16"/>
+  <path class="mk-half" d="M844 982 A16 16 0 0 0 844 1014 Z"/><circle class="mk-ring" cx="844" cy="998" r="16"/>
+  <circle class="mk-ring" cx="906" cy="998" r="16"/>
+  <text class="value ink" x="960" y="994">2 of 9</text>
+  <text class="partial muted" x="960" y="1024">+ 2 partial</text>
+
+  <!-- ROW 5: Claude Code multi-agent review 2 yes, 1 partial -->
+  <text class="label ink" x="72" y="1060">Claude Code</text>
+  <text class="label ink" x="72" y="1088">multi-agent review</text>
+  <circle class="mk-ring" cx="410" cy="1066" r="16"/>
+  <circle class="mk-ring" cx="472" cy="1066" r="16"/>
+  <circle class="mk-ring" cx="534" cy="1066" r="16"/>
+  <circle class="mk-ring" cx="596" cy="1066" r="16"/>
+  <circle class="mk-fill" cx="658" cy="1066" r="16"/>
+  <path class="mk-half" d="M720 1050 A16 16 0 0 0 720 1082 Z"/><circle class="mk-ring" cx="720" cy="1066" r="16"/>
+  <circle class="mk-ring" cx="782" cy="1066" r="16"/>
+  <circle class="mk-ring" cx="844" cy="1066" r="16"/>
+  <circle class="mk-fill" cx="906" cy="1066" r="16"/>
+  <text class="value ink" x="960" y="1062">2 of 9</text>
+  <text class="partial muted" x="960" y="1092">+ 1 partial</text>
+
+  <!-- ROW 6: CodeLayer, Continue.dev 2 yes -->
+  <text class="label ink" x="72" y="1128">CodeLayer,</text>
+  <text class="label ink" x="72" y="1156">Continue.dev</text>
+  <circle class="mk-ring" cx="410" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="472" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="534" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="596" cy="1134" r="16"/>
+  <circle class="mk-fill" cx="658" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="720" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="782" cy="1134" r="16"/>
+  <circle class="mk-ring" cx="844" cy="1134" r="16"/>
+  <circle class="mk-fill" cx="906" cy="1134" r="16"/>
+  <text class="value ink" x="960" y="1146">2 of 9</text>
+
+  <!-- ROW 7: GitHub SpecKit 1 yes, 1 partial -->
+  <text class="label ink" x="72" y="1211">GitHub SpecKit</text>
+  <path class="mk-half" d="M410 1186 A16 16 0 0 0 410 1218 Z"/><circle class="mk-ring" cx="410" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="472" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="534" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="596" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="658" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="720" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="782" cy="1202" r="16"/>
+  <circle class="mk-ring" cx="844" cy="1202" r="16"/>
+  <circle class="mk-fill" cx="906" cy="1202" r="16"/>
+  <text class="value ink" x="960" y="1198">1 of 9</text>
+  <text class="partial muted" x="960" y="1228">+ 1 partial</text>
+
+  <!-- ROW 8: Devin, OpenHands 1 yes, 1 partial -->
+  <text class="label ink" x="72" y="1279">Devin, OpenHands</text>
+  <circle class="mk-fill" cx="410" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="472" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="534" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="596" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="658" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="720" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="782" cy="1270" r="16"/>
+  <circle class="mk-ring" cx="844" cy="1270" r="16"/>
+  <path class="mk-half" d="M906 1254 A16 16 0 0 0 906 1286 Z"/><circle class="mk-ring" cx="906" cy="1270" r="16"/>
+  <text class="value ink" x="960" y="1266">1 of 9</text>
+  <text class="partial muted" x="960" y="1296">+ 1 partial</text>
+
+  <!-- ROW 9: ScaffoldHub 1 yes -->
+  <text class="label ink" x="72" y="1347">ScaffoldHub</text>
+  <circle class="mk-fill" cx="410" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="472" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="534" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="596" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="658" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="720" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="782" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="844" cy="1338" r="16"/>
+  <circle class="mk-ring" cx="906" cy="1338" r="16"/>
+  <text class="value ink" x="960" y="1350">1 of 9</text>
+
+  <!-- FOOTER -->
+  <line x1="72" y1="1400" x2="1128" y2="1400" stroke="#cfc9be" stroke-width="1"/>
+  <text class="source muted" x="72" y="1444"><tspan class="accent" font-weight="700">Source:</tspan> LaunchPad README, comparison table, v2.4.0</text>
+  <text class="brand ink" x="1128" y="1444" text-anchor="end">LaunchPad</text>
+</svg>
