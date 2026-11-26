@@ -270,7 +270,26 @@ def validate_commit(root: Path, sha: str, version: str, state: RemoteState) -> N
         raise Refusal(
             "Release commit is not on origin/main. Merge it to main before releasing."
         )
-    if state.tag is not None:
+    if state.tag is None:
+        try:
+            main_version = version_from_json(
+                git(root, "show", f"refs/remotes/origin/main:{MANIFESTS[0]}")
+            )
+            if not SEMVER.fullmatch(main_version):
+                raise ValueError("invalid main version")
+        except (Refusal, ValueError) as exc:
+            raise Refusal(
+                "origin/main manifest is unreadable or not plain semver. "
+                "Restore a valid version on main before retrying."
+            ) from exc
+        if tuple(map(int, main_version.split("."))) < tuple(
+            map(int, version.split("."))
+        ):
+            raise Refusal(
+                f"v{version} was rolled back on main to v{main_version}; "
+                "it will not be released. Close its failure issue by hand."
+            )
+    else:
         if not ancestor(root, state.tag, state.main):
             raise Refusal(
                 "Release tag is off main. The maintainer must repair the tag."
@@ -315,6 +334,29 @@ def plan(root: Path) -> int:
     return 0
 
 
+def require_live_tag(root: Path, tag: str, sha: str) -> None:
+    tag_ref = f"refs/tags/{tag}"
+    peeled_ref = f"{tag_ref}^{{}}"
+    refs = {}
+    for line in git(root, "ls-remote", "origin", tag_ref, peeled_ref).splitlines():
+        fields = line.split()
+        if (
+            len(fields) != 2
+            or not SHA.fullmatch(fields[0])
+            or fields[1] not in (tag_ref, peeled_ref)
+        ):
+            raise Refusal(
+                f"Release tag {tag} is unreadable. Repair the tag before retrying."
+            )
+        refs[fields[1]] = fields[0]
+    commit = refs.get(peeled_ref, refs.get(tag_ref))
+    if commit != sha:
+        raise Refusal(
+            f"Release tag {tag} points to {commit or 'missing'}, expected release commit {sha}. "
+            "Repair the tag before retrying; it will not be moved."
+        )
+
+
 def publish(root: Path) -> int:
     version = current_version(root)
     tag = f"v{version}"
@@ -357,6 +399,7 @@ def publish(root: Path) -> int:
         git(root, "push", "origin", f"refs/tags/{tag}")
     if state.release == "absent":
         for attempt in range(3):
+            require_live_tag(root, tag, sha)
             try:
                 command(
                     [
@@ -378,6 +421,7 @@ def publish(root: Path) -> int:
                     raise
                 time.sleep(10)
     if move_stable:
+        require_live_tag(root, tag, sha)
         git(root, "push", "origin", f"{sha}:refs/heads/stable")
     print(f"Release {tag} is published and stable contains {sha}.")
     return 0

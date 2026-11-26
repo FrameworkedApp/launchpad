@@ -49,12 +49,20 @@ class LaneRepo:
             "    if 'LS_TAGS_OUTPUT' in os.environ:\n"
             "        print(os.environ['LS_TAGS_OUTPUT'])\n"
             "        sys.exit(0)\n"
+            "if len(args) == 4 and args[:2] == ['ls-remote', 'origin']:\n"
+            "    if os.environ.get('FAIL_TAG_RECHECK'):\n"
+            "        sys.exit(1)\n"
+            "    if 'TAG_RECHECK_OUTPUT' in os.environ:\n"
+            "        print(os.environ['TAG_RECHECK_OUTPUT'])\n"
+            "        sys.exit(0)\n"
             f"os.execv({real_git!r}, [{real_git!r}, *args])\n")
         git_stub.chmod(0o755)
         self.env = {
             **os.environ,
             "PATH": str(self.bin) + os.pathsep + os.environ["PATH"],
             "GH_TOKEN": "fixture-only",
+            "LANE_REAL_GIT": real_git,
+            "LANE_ORIGIN": str(self.origin),
             "LANE_CALLS": str(self.calls_file),
             "LANE_STATE": str(self.state_file),
         }
@@ -82,7 +90,15 @@ args = sys.argv[1:]
 with open(os.environ["LANE_CALLS"], "a") as log:
     log.write(json.dumps(["gh", *args]) + "\\n")
 state = Path(os.environ["LANE_STATE"])
+def change_tag(phase):
+    if os.environ.get("CHANGE_TAG_PHASE") == phase:
+        import subprocess
+        argv = [os.environ["LANE_REAL_GIT"], "--git-dir", os.environ["LANE_ORIGIN"], "update-ref"]
+        target = os.environ["CHANGE_TAG_TO"]
+        argv += ["-d", "refs/tags/v2.5.0"] if target == "missing" else ["refs/tags/v2.5.0", target]
+        subprocess.run(argv, check=True, capture_output=True, timeout=15)
 if args[0] == "api":
+    change_tag("api")
     if os.environ.get("FAIL_GH"):
         sys.exit(1)
     if "RELEASE_API_OUTPUT" in os.environ:
@@ -103,6 +119,7 @@ elif args[:2] == ["release", "create"]:
     entries = json.loads(state.read_text())
     entries.append({"tagName": args[2], "isDraft": False})
     state.write_text(json.dumps(entries))
+    change_tag("create")
 else:
     sys.exit(2)
 ''')
@@ -690,3 +707,115 @@ def test_publish_live_tag_read_refuses_without_writes(lane, env, reason):
     assert reason in output
     assert lane.calls("gh") == [["gh", "api", "repos/{owner}/{repo}/releases?per_page=100", "--paginate", "--slurp"]]
     assert "refs/tags/v2.5.0" not in lane.refs()
+
+
+@pytest.mark.parametrize("command", ["plan", "publish"])
+@pytest.mark.parametrize("manifest,reason", [
+    ('{"version":"2.4.0"}', "v2.5.0 was rolled back on main to v2.4.0"),
+    ('not JSON', "plain semver"),
+    ('{}', "plain semver"),
+    ('{"version":3}', "plain semver"),
+    ('{"version":"2.05.0"}', "plain semver"),
+    (None, "manifest"),
+])
+def test_untagged_release_refuses_rolled_back_or_invalid_live_main(lane, command, manifest, reason):
+    lane.version("2.4.0")
+    if manifest is None:
+        (lane.repo / MANIFESTS[0]).unlink()
+    else:
+        lane.write(MANIFESTS[0], manifest)
+    lane.commit()
+    lane.git("push", "origin", "main")
+    lane.git("checkout", "--detach", lane.initial)
+    lane.git("update-ref", "refs/remotes/origin/main", lane.initial)
+    output = lane.unchanged(command, 1)
+    assert reason in output
+    assert not lane.creates()
+    assert "refs/tags/v2.5.0" not in lane.refs()
+
+
+@pytest.mark.parametrize("main_version", ["2.5.0", "2.6.0"])
+def test_equal_or_higher_live_main_keeps_untagged_release(lane, main_version):
+    lane.version(main_version)
+    lane.commit()
+    lane.git("push", "origin", "main")
+    lane.git("checkout", "--detach", lane.initial)
+    assert "done=false" in lane.unchanged("plan")
+    lane.run("publish")
+    assert lane.git("ls-remote", "origin", "refs/tags/v2.5.0^{}").split()[0] == lane.initial
+
+
+@pytest.mark.parametrize("main_version", ["2.4.0", "invalid"])
+def test_existing_tag_retry_ignores_live_main_version(lane, main_version):
+    lane.tag(annotated=True)
+    lane.version(main_version)
+    lane.commit()
+    lane.git("push", "origin", "main")
+    lane.git("checkout", "--detach", lane.initial)
+    assert f"sha={lane.initial}" in lane.unchanged("plan")
+    lane.run("publish")
+    assert lane.git("ls-remote", "origin", "refs/heads/stable").split()[0] == lane.initial
+
+
+@pytest.mark.parametrize("phase,published,annotated,target", [
+    ("api", False, False, "moved"),
+    ("api", False, True, "moved"),
+    ("api", True, True, "moved"),
+    ("create", False, True, "moved"),
+    ("api", False, True, "missing"),
+    ("create", False, True, "missing"),
+])
+def test_publish_refuses_tag_changed_after_state_read(lane, phase, published, annotated, target):
+    lane.stable(lane.initial)
+    release = lane.advance()
+    lane.tag(release, annotated=annotated)
+    if published:
+        lane.release()
+    writes_before = len(lane.calls("git-write"))
+    output = lane.run("publish", 1, CHANGE_TAG_PHASE=phase,
+                      CHANGE_TAG_TO=lane.initial if target == "moved" else "missing")
+    assert release in output
+    assert (lane.initial if target == "moved" else "missing") in output
+    assert len(lane.creates()) == (1 if phase == "create" else 0)
+    assert lane.calls("git-write")[writes_before:] == []
+    assert lane.git("ls-remote", "origin", "refs/heads/stable").split()[0] == lane.initial
+    entries = json.loads(lane.state_file.read_text())
+    assert len(entries) == (1 if published or phase == "create" else 0)
+    remote_tag = lane.git("ls-remote", "origin", "refs/tags/v2.5.0")
+    assert remote_tag.split()[0] == lane.initial if target == "moved" else not remote_tag
+
+
+@pytest.mark.parametrize("env,reason", [
+    ({"TAG_RECHECK_OUTPUT": "not-a-sha\trefs/tags/v2.5.0"}, "unreadable"),
+    ({"TAG_RECHECK_OUTPUT": ""}, "missing"),
+    ({"FAIL_TAG_RECHECK": "1"}, "failed"),
+])
+def test_publish_refuses_unreadable_tag_recheck(lane, env, reason):
+    lane.tag(annotated=True)
+    output = lane.unchanged("publish", 1, **env)
+    assert reason in output
+    assert not lane.creates()
+
+
+def test_runbook_install_command_passes_release_ref_without_redirection(tmp_path):
+    runbook = (SCRIPT.parents[3] / "docs/maintainers/RELEASE_PROCESS.md").read_text()
+    block = runbook.split("```bash\n", 1)[1].split("```", 1)[0]
+    install = block.split("PLUGIN_PATH=", 1)[0]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    args_file = tmp_path / "args.json"
+    codex = bin_dir / "codex"
+    codex.write_text(f"#!{sys.executable}\n" +
+                     "import json, os, sys\nfrom pathlib import Path\n"
+                     "Path(os.environ['TEST_CODEX_ARGS']).write_text(json.dumps(sys.argv[1:]))\n")
+    codex.chmod(0o755)
+    result = subprocess.run(["bash", "-e", "-c", install], cwd=tmp_path,
+                            env={"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
+                                 "TEST_CODEX_ARGS": str(args_file)},
+                            capture_output=True, text=True, check=False, timeout=15)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(args_file.read_text()) == [
+        "plugin", "marketplace", "add", "https://github.com/FrameworkedApp/launchpad.git",
+        "--ref", "my-release-branch", "--json",
+    ]
+    assert "<release-ref>" not in runbook

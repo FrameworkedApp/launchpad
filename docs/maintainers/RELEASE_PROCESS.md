@@ -22,11 +22,12 @@ The shared logic lives in `plugins/launchpad/scripts/plugin-release-lane.py`, wi
 
 ## Codex checks before merge
 
-Bump `plugins/launchpad/.claude-plugin/plugin.json` and `plugins/launchpad/.codex-plugin/plugin.json` together, then complete these manual checks before merging the release PR. They require a logged-in Codex command line, `jq`, and the release branch or commit in `<release-ref>`. This direct install from the LaunchPad repository is the maintainer test route. Users install through the Frameworked marketplace.
+Bump `plugins/launchpad/.claude-plugin/plugin.json` and `plugins/launchpad/.codex-plugin/plugin.json` together, then complete these manual checks before merging the release PR. They require a logged-in Codex command line, `jq`, and the release branch or commit in `RELEASE_REF`. This direct install from the LaunchPad repository is the maintainer test route. Users install through the Frameworked marketplace.
 
 ```bash
 # Install check: install the release candidate and verify the required installed files.
-codex plugin marketplace add https://github.com/FrameworkedApp/launchpad.git --ref <release-ref> --json
+RELEASE_REF=my-release-branch  # the release branch or commit to test
+codex plugin marketplace add https://github.com/FrameworkedApp/launchpad.git --ref "$RELEASE_REF" --json
 PLUGIN_PATH=$(codex plugin add launchpad@launchpad --json | jq -r '.installedPath')
 codex plugin list
 test -f "$PLUGIN_PATH/codex/skills/lp/SKILL.md"
@@ -161,6 +162,8 @@ A fix merged after a failed release carries `no-release` when it keeps the versi
 A pending release ships the commit its retry selects (see Failure and retry). If that commit includes changes merged with `no-release` after the failed run, they ship too; update the release notes first when one of them belongs there.
 
 ## Failure and retry
+
+A run for an untagged version that was rolled back on `main` refuses before any write; close its failure issue by hand.
 
 A failed job opens or comments on `Release vX.Y.Z failed`. If the version is unreadable, the title is `Release failed (version unreadable)`. The body contains the run URL, commit and job conclusions. The run page is the source of truth, including cancellations and timeouts. Close the issue by hand after the failure is resolved; the lane does not close it automatically.
 

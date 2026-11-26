@@ -4812,3 +4812,33 @@ Add the shared `checks` invocation to `v2-release.yml` before stable promotion a
 **Notes**
 
 Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.
+
+---
+
+#### BL-404 - Refresh release freshness on publish retries and permit manifest-only reverts
+
+- **Priority**: P3
+- **Status**: TODO
+- **Area**: Infrastructure
+
+**Encountered**
+
+- **Date**: 2026-11-25
+- **Location**: `.github/workflows/release.yml`, `plugins/launchpad/scripts/plugin-release-lane.py`
+- **Scenario**: PR #248 review of release retries and reverting a failed version bump.
+
+**Current Behavior**
+
+Re-running only a failed `publish` job reuses that run's earlier `verify` result. Freshness is not checked again if its 30-day window lapses between attempts. A manifest-only revert to an already published version still runs every release check, so stale freshness dates can block the revert.
+
+**Desired Behavior**
+
+Publication checks freshness before its first write on every attempt. A manifest-only revert to a published tag can pass the PR guard without release checks that could block recovery on stale freshness dates.
+
+**Proposed Fix**
+
+Re-run the freshness gate in `publish` before its first write, and let `pr-guard` skip the release checks for a manifest-only revert to a published tag.
+
+**Notes**
+
+Source: PR #248 review. Open follow-up, not part of the 2.4.1 release.
