@@ -322,8 +322,7 @@ def plan(root: Path) -> int:
         if state.tag is not None
         else release_sha(root, os.environ.get("GITHUB_SHA"))
     )
-    if not done:
-        validate_commit(root, sha, version, state)
+    validate_commit(root, sha, version, state)
     output = f"version={version}\ntag={tag}\nsha={sha}\ndone={str(done).lower()}\n"
     destination = os.environ.get("GITHUB_OUTPUT")
     if destination:

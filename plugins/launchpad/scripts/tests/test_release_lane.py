@@ -223,6 +223,30 @@ def test_completed_release(lane, ahead):
     assert lane.calls("lint") == []
 
 
+@pytest.mark.parametrize("case", ["D1", "D2"])
+def test_completed_release_validates_tag(lane, case):
+    if case == "D1":
+        lane.version("2.4.0")
+        sha = lane.commit()
+        lane.git("push", "origin", "main")
+        lane.tag(sha)
+        lane.version("2.5.0")
+        lane.commit()
+        lane.git("push", "origin", "main")
+    else:
+        lane.git("checkout", "-b", "side")
+        lane.write("side.txt", "side\n")
+        sha = lane.commit()
+        lane.tag(sha)
+        lane.git("checkout", "main")
+    lane.release()
+    lane.stable(sha)
+    output = lane.unchanged("plan", 1)
+    assert ("holds another version" if case == "D1" else "not on origin/main") in output
+    assert "done=true" not in output
+    assert lane.calls("lint") == []
+
+
 def test_p3_earlier_lightweight_hand_tag(lane):
     lane.tag()
     lane.advance()
